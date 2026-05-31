@@ -1,0 +1,602 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ============================================ */
+    /* GAMER PLUG SOLUTION — Light Mode Tokens     */
+    /* Cyber-steel blue-white, silver accents      */
+    /* ============================================ */
+    --background: 210 30% 96%;
+    --foreground: 215 60% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 60% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 60% 8%;
+    /* Electric Cyber-Blue (from logo) */
+    --primary: 217 100% 56%;
+    --primary-foreground: 0 0% 100%;
+    /* Cyber-Cyan Glow */
+    --secondary: 195 100% 50%;
+    --secondary-foreground: 215 60% 8%;
+    --muted: 210 30% 91%;
+    --muted-foreground: 215 20% 45%;
+    /* Chrome/Metallic Silver Accent */
+    --accent: 210 15% 75%;
+    --accent-foreground: 215 60% 8%;
+    /* Alert Red */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 25% 86%;
+    --input: 215 25% 86%;
+    --ring: 217 100% 56%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* ============================================ */
+    /* GAMER PLUG SOLUTION — Dark Mode Tokens      */
+    /* Deep metallic space-dark, neon blue/cyan    */
+    /* ============================================ */
+
+    /* Deep metallic charcoal — from the logo background */
+    --background: 220 25% 5%;
+    --foreground: 210 30% 95%;
+
+    /* Slightly elevated surface for cards */
+    --card: 220 28% 9%;
+    --card-foreground: 210 30% 95%;
+    --popover: 220 28% 9%;
+    --popover-foreground: 210 30% 95%;
+
+    /* Neon Electric Blue — the dominant logo color */
+    --primary: 217 100% 60%;
+    --primary-foreground: 220 25% 5%;
+
+    /* Neon Cyber-Cyan Glow */
+    --secondary: 195 100% 55%;
+    --secondary-foreground: 220 25% 5%;
+
+    --muted: 220 25% 14%;
+    --muted-foreground: 215 20% 60%;
+
+    /* Chrome / Metallic Silver */
+    --accent: 210 15% 70%;
+    --accent-foreground: 220 25% 5%;
+
+    /* Danger Alert */
+    --destructive: 0 80% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 25% 16%;
+    --input: 220 25% 14%;
+    --ring: 217 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+    overscroll-behavior-y: none;
+    background-attachment: fixed;
+  }
+
+  /* Cyber grid scanline overlay on dark mode */
+  .dark body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, hsl(217 100% 60% / 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(217 100% 60% / 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-orbitron), sans-serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+
+  /* ====================== */
+  /* Core Card Styles       */
+  /* ====================== */
+
+  .glass-card {
+    @apply bg-white/80 dark:bg-black/50 backdrop-blur-xl
+           border border-slate-200/60 dark:border-blue-500/15
+           shadow-sm dark:shadow-xl transition-all duration-300;
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+                0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  }
+
+  .village-card {
+    @apply bg-white dark:bg-[hsl(220_28%_9%)] backdrop-blur-2xl
+           border border-slate-200 dark:border-blue-500/20
+           shadow-md dark:shadow-2xl transition-all duration-300;
+  }
+
+  /* ====================== */
+  /* Cyber Glow Card        */
+  /* ====================== */
+  .cyber-card {
+    @apply relative overflow-hidden rounded-xl
+           bg-white dark:bg-[hsl(220_28%_9%)]
+           border border-blue-500/20 dark:border-blue-500/25
+           transition-all duration-500;
+  }
+
+  .cyber-card::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-500;
+    background: linear-gradient(135deg,
+      hsl(217 100% 60% / 0.08) 0%,
+      hsl(195 100% 55% / 0.04) 100%);
+    pointer-events: none;
+  }
+
+  @media (min-width: 1024px) {
+    .cyber-card:hover::before {
+      @apply opacity-100;
+    }
+    .cyber-card:hover {
+      @apply border-blue-500/50 -translate-y-1;
+      box-shadow: 0 0 20px hsl(217 100% 60% / 0.15),
+                  0 20px 40px hsl(0 0% 0% / 0.3);
+    }
+  }
+
+  /* ====================== */
+  /* Gradient Utilities     */
+  /* ====================== */
+
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(217 100% 56%) 0%, hsl(195 100% 50%) 100%);
+    @apply text-white;
+  }
+
+  .gradient-cyber {
+    background: linear-gradient(135deg,
+      hsl(217 100% 60%) 0%,
+      hsl(240 80% 60%) 50%,
+      hsl(195 100% 55%) 100%);
+    @apply text-white;
+  }
+
+  .gradient-success {
+    @apply bg-gradient-to-br from-emerald-400 to-emerald-600 text-white;
+  }
+
+  .gradient-warning {
+    @apply bg-gradient-to-br from-amber-400 to-orange-600 text-white;
+  }
+
+  .gradient-danger {
+    @apply bg-gradient-to-br from-rose-500 to-red-700 text-white;
+  }
+
+  /* Network gradients */
+  .gradient-mtn {
+    @apply bg-gradient-to-br from-yellow-300 to-yellow-500 text-yellow-950;
+  }
+
+  .gradient-telecel {
+    @apply bg-gradient-to-br from-red-500 to-rose-700 text-white;
+  }
+
+  .gradient-airteltigo {
+    @apply bg-gradient-to-br from-orange-500 to-red-600 text-white;
+  }
+
+  /* Network badges */
+  .network-badge-mtn {
+    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300
+           border border-yellow-200 dark:border-yellow-700/50 backdrop-blur-md;
+  }
+
+  .network-badge-telecel {
+    @apply bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300
+           border border-red-200 dark:border-red-700/50 backdrop-blur-md;
+  }
+
+  .network-badge-airteltigo {
+    @apply bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300
+           border border-orange-200 dark:border-orange-700/50 backdrop-blur-md;
+  }
+
+  /* Status chips */
+  .status-pending {
+    @apply bg-amber-500/20 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400
+           border border-amber-500/30 backdrop-blur-md;
+  }
+
+  .status-processing {
+    @apply bg-blue-500/20 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400
+           border border-blue-500/30 backdrop-blur-md;
+  }
+
+  .status-completed {
+    @apply bg-emerald-500/20 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400
+           border border-emerald-500/30 backdrop-blur-md;
+  }
+
+  .status-failed {
+    @apply bg-destructive/20 text-destructive dark:bg-destructive/10 dark:text-destructive
+           border border-destructive/30 backdrop-blur-md;
+  }
+
+  /* Interactive base card hover */
+  .interactive-card {
+    @apply transition-all duration-500 ease-out;
+  }
+
+  @media (min-width: 1024px) {
+    .interactive-card:hover {
+      @apply shadow-2xl -translate-y-2 border-primary/40 bg-white/60 dark:bg-gray-900/60;
+      box-shadow: 0 20px 40px -10px hsl(var(--primary) / 0.2);
+    }
+  }
+
+  /* Shimmer loader */
+  .shimmer {
+    @apply relative overflow-hidden;
+  }
+
+  .shimmer::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 255, 255, 0.25),
+        transparent);
+    animation: shimmer 2s infinite;
+  }
+
+  /* =============================== */
+  /* Cyber Neon Button               */
+  /* =============================== */
+  .btn-cyber {
+    @apply relative inline-flex items-center justify-center gap-2
+           px-6 py-3 rounded-lg font-semibold text-sm tracking-wide
+           text-white transition-all duration-300 overflow-hidden;
+    background: linear-gradient(135deg, hsl(217 100% 56%) 0%, hsl(195 100% 50%) 100%);
+  }
+
+  .btn-cyber::after {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, hsl(217 100% 70%) 0%, hsl(195 100% 65%) 100%);
+  }
+
+  .btn-cyber:hover::after {
+    @apply opacity-100;
+  }
+
+  .btn-cyber:hover {
+    box-shadow: 0 0 20px hsl(217 100% 56% / 0.5),
+                0 8px 24px hsl(0 0% 0% / 0.3);
+    @apply -translate-y-0.5;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Font utilities */
+  .font-orbitron {
+    font-family: var(--font-orbitron), sans-serif;
+  }
+
+  .font-rajdhani {
+    font-family: var(--font-rajdhani), sans-serif;
+  }
+
+  /* Cyber glow text */
+  .text-cyber-glow {
+    text-shadow: 0 0 10px hsl(217 100% 60% / 0.8),
+                 0 0 30px hsl(195 100% 55% / 0.5);
+  }
+
+  .text-gradient-cyber {
+    @apply text-transparent bg-clip-text;
+    background-image: linear-gradient(135deg, hsl(217 100% 65%) 0%, hsl(195 100% 55%) 100%);
+  }
+}
+
+/* ============================================ */
+/* Custom scrollbar — cyber blue accent        */
+/* ============================================ */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(217 100% 56% / 0.3);
+  border-radius: 9999px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(217 100% 56% / 0.7);
+}
+
+/* ============================================ */
+/* Glow Effects                                */
+/* ============================================ */
+
+.glow-primary {
+  box-shadow: 0 0 15px hsl(217 100% 56% / 0.5),
+              0 0 40px hsl(217 100% 56% / 0.2),
+              inset 0 0 10px hsl(217 100% 56% / 0.1);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 15px hsl(195 100% 50% / 0.5),
+              0 0 40px hsl(195 100% 50% / 0.2);
+}
+
+.glow-success {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+}
+
+.glow-warning {
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+}
+
+/* ============================================ */
+/* Page Transitions                            */
+/* ============================================ */
+
+.page-enter {
+  opacity: 0;
+  filter: blur(8px);
+}
+
+@media (min-width: 768px) {
+  .page-enter {
+    transform: translateY(15px);
+  }
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+  transition: opacity 400ms, transform 400ms cubic-bezier(0.16, 1, 0.3, 1), filter 400ms;
+}
+
+/* ============================================ */
+/* Driver.js Tutorial — Cyber Blue Theme       */
+/* ============================================ */
+
+.driver-active-element,
+.driver-highlighted-element {
+  box-shadow: 0 0 0 4px hsl(217 100% 56% / 0.4),
+              0 0 20px hsl(217 100% 56% / 0.3) !important;
+  border-radius: 0.5rem !important;
+  z-index: 10000 !important;
+}
+
+.driver-popover {
+  background: transparent !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  max-width: 320px !important;
+}
+
+.dark .driver-popover {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.driver-popover-title {
+  font-family: var(--font-orbitron), -apple-system, sans-serif !important;
+  font-size: 1.5rem !important;
+  font-weight: 900 !important;
+  /* Cyber Blue brand accent */
+  color: hsl(217 100% 70%) !important;
+  margin-bottom: 0.5rem !important;
+  line-height: 1.2 !important;
+  text-shadow: 2px 2px 3px #000000, 0 0 15px hsl(217 100% 60% / 0.8) !important;
+  letter-spacing: -0.01em !important;
+}
+
+.driver-popover-description {
+  font-family: var(--font-rajdhani), -apple-system, sans-serif !important;
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  line-height: 1.6 !important;
+  margin-bottom: 1.5rem !important;
+  text-shadow: 1px 1px 2px #000000, 0 0 8px rgba(0, 0, 0, 0.8) !important;
+}
+
+.driver-popover-description p,
+.driver-popover-description li,
+.driver-popover-description div {
+  font-weight: 600 !important;
+  text-shadow: 1px 1px 2px #000000, 0 0 8px rgba(0, 0, 0, 0.8) !important;
+}
+
+.driver-popover-description strong {
+  font-weight: 800 !important;
+  color: hsl(217 100% 70%) !important;
+}
+
+.driver-popover-description em {
+  font-weight: 600 !important;
+  color: #F3F4F6 !important;
+}
+
+.driver-popover-close-btn {
+  color: rgba(255, 255, 255, 0.8) !important;
+  width: 32px !important;
+  height: 32px !important;
+  font-size: 1.5rem !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9) !important;
+}
+
+.driver-popover-close-btn:hover {
+  color: hsl(217 100% 70%) !important;
+  background: transparent !important;
+}
+
+.driver-popover-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  border-top: none !important;
+}
+
+.driver-popover-progress-text {
+  color: rgba(255, 255, 255, 0.8) !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9) !important;
+  font-weight: 600 !important;
+}
+
+.driver-popover-progress-text::after {
+  display: none !important;
+}
+
+.driver-popover-prev-btn,
+.driver-popover-next-btn {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #0a1628 !important;
+  border: none !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  min-width: 90px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.driver-popover-next-btn {
+  background: linear-gradient(135deg, hsl(217 100% 60%) 0%, hsl(195 100% 50%) 100%) !important;
+  color: white !important;
+}
+
+.driver-popover-prev-btn:hover,
+.driver-popover-next-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+.driver-active-element {
+  border-radius: 0.5rem !important;
+  box-shadow: 0 0 0 4px hsl(217 100% 60% / 0.6),
+              0 0 30px hsl(217 100% 60% / 0.3) !important;
+  z-index: 100002 !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: relative !important;
+}
+
+.driver-overlay {
+  background-color: rgba(5, 10, 20, 0.9) !important;
+}
+
+.dark .driver-popover-title {
+  color: hsl(217 100% 70%) !important;
+}
+
+.dark .driver-popover-description {
+  color: white !important;
+}
+
+.dark .driver-popover-prev-btn {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #0a1628 !important;
+}
+
+.dark .driver-popover-next-btn {
+  background: linear-gradient(135deg, hsl(217 100% 60%) 0%, hsl(195 100% 50%) 100%) !important;
+  color: white !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .driver-popover {
+    max-width: 90% !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .driver-popover-title {
+    font-size: 1.25rem !important;
+    text-align: center !important;
+  }
+
+  .driver-popover-description {
+    font-size: 0.95rem !important;
+    text-align: center !important;
+  }
+
+  .driver-popover-footer {
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .driver-popover-title {
+    font-size: 1.1rem !important;
+    margin-bottom: 0.4rem !important;
+  }
+
+  .driver-popover-description {
+    font-size: 0.9rem !important;
+    line-height: 1.4 !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .driver-popover-prev-btn,
+  .driver-popover-next-btn {
+    padding: 0.5rem 0.8rem !important;
+    font-size: 0.75rem !important;
+    min-width: 60px !important;
+    height: 32px !important;
+  }
+}
