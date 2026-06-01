@@ -56,7 +56,7 @@ export function DashboardHeader() {
 
     // Get role config
     const userRole = isAdmin ? 'admin' : isSubAdmin ? 'sub-admin' : (dbUser?.role || 'user') as keyof typeof roleConfig
-    const currentRole = roleConfig[userRole] || roleConfig['user']
+    const currentRole = roleConfig[userRole] || roleConfig['agent']
     const RoleIcon = currentRole.icon
 
     return (

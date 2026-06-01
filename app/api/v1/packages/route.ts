@@ -35,17 +35,8 @@ export async function GET(request: NextRequest) {
         let price = pkg.price
         
         switch (role) {
-            case 'platinum':
-                price = pkg.platinum_price || pkg.price
-                break
-            case 'super dealer':
-                price = pkg.super_dealer_price || pkg.price
-                break
             case 'dealer':
                 price = pkg.dealer_price || pkg.price
-                break
-            case 'super agent':
-                price = pkg.super_agent_price || pkg.price
                 break
             case 'agent':
                 price = pkg.agent_price || pkg.price

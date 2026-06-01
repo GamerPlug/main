@@ -168,8 +168,8 @@ export default function ProfilePage() {
                 <div className="relative z-10">
                     <div className="flex flex-col sm:flex-row items-center gap-6 border-b border-slate-100 dark:border-white/5 pb-6 mb-6">
                         {(() => {
-                            const userRole = (dbUser?.role || 'user') as UserRole
-                            const config = roleConfig[userRole] || roleConfig['user']
+                            const userRole = (dbUser?.role || 'agent') as UserRole
+                            const config = roleConfig[userRole] || roleConfig['agent']
                             const RoleIcon = config.icon
                             return (
                                 <div

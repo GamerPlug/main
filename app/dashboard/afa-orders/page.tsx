@@ -57,7 +57,7 @@ export default function AFAOrdersPage() {
                 return acc
             }, {})
 
-            const userRole = dbUser?.role || 'user'
+            const userRole = dbUser?.role || 'agent'
             const price = userRole === 'agent'
                 ? parseFloat(settings?.afa_price_agent || '10')
                 : parseFloat(settings?.afa_price_user || '10')

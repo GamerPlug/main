@@ -419,13 +419,8 @@ export default function AdminUsersPage() {
                             <SelectContent>
                                 <SelectItem value="all">All Roles</SelectItem>
                                 <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="sub-admin">Sub-Admin</SelectItem>
-                                <SelectItem value="agent">Agent</SelectItem>
-                                <SelectItem value="super agent">Super Agent</SelectItem>
                                 <SelectItem value="dealer">Dealer</SelectItem>
-                                <SelectItem value="super dealer">Super Dealer</SelectItem>
-                                <SelectItem value="platinum">Platinum</SelectItem>
-                                <SelectItem value="user">User</SelectItem>
+                                <SelectItem value="agent">Agent</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -466,8 +461,8 @@ export default function AdminUsersPage() {
                                     <div className="flex justify-between items-start">
                                         <div className="flex gap-4 items-center">
                                             {(() => {
-                                                const userRole = (user.role || 'user') as UserRole
-                                                const config = roleConfig[userRole] || roleConfig['user']
+                                                const userRole = (user.role || 'agent') as UserRole
+                                                const config = roleConfig[userRole] || roleConfig['agent']
                                                 const RoleIcon = config.icon
                                                 return (
                                                     <div
@@ -543,7 +538,7 @@ export default function AdminUsersPage() {
                                                         Settle & Reactivate
                                                     </DropdownMenuItem>
                                                 )}
-                                                {(user.role === 'agent' || user.role === 'super agent' || user.role === 'dealer' || user.role === 'super dealer' || user.role === 'platinum') && (
+                                                {(user.role === 'agent' || user.role === 'dealer') && (
                                                     <DropdownMenuItem onClick={() => {
                                                         const wallet = Array.isArray(user.wallets) ? user.wallets[0] : user.wallets
                                                         setCreditLimitDialogUser(user)
