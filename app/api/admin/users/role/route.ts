@@ -39,11 +39,7 @@ export async function POST(request: NextRequest) {
         // Service role client to bypass RLS
         const supabase = createServerClient()
 
-        // Roles are now permanent per user request
-        const updateData: any = { 
-            role,
-            agent_expires_at: null // Clear any existing expiry
-        }
+        const updateData: any = { role }
 
         const { error: updateError } = await (supabase
             .from('users') as any)

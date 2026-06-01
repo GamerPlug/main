@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // Use explicit columns instead of SELECT * for better performance
                 const query = supabase
                     .from('users')
-                    .select('id, email, first_name, last_name, phone_number, role, status, requires_settlement, agent_expires_at, created_at, updated_at, wallets(balance, credit_limit, unlimited_credit)')
+                    .select('id, email, first_name, last_name, phone_number, role, status, requires_settlement, created_at, updated_at, wallets(balance, credit_limit, unlimited_credit)')
                     .eq('id', userId)
                     .single()
 
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null)
         setDbUser(null)
         setSession(null)
-        router.push('/auth/login')
+        router.push('/')
     }
 
     // Track user activity
