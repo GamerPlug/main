@@ -2,344 +2,450 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import {
-    Smartphone,
-    Zap,
-    Shield,
-    Clock,
-    ArrowRight,
-    CreditCard,
-    CheckCircle2,
-    Sun,
-    Moon,
-    Gamepad2,
-    Sparkles,
-} from 'lucide-react'
-import { WhatsAppCommunityButtons } from '@/components/whatsapp-community-buttons'
-import { WhatsAppCTA } from '@/components/whatsapp-cta'
-import { NetworkIcon } from '@/components/network-icon'
 import Image from 'next/image'
-import { useTheme } from 'next-themes'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/auth-context'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Eye, EyeOff, Loader2, Shield, Mail, Lock, User, Phone } from 'lucide-react'
+import { toast } from 'sonner'
+import { validateGhanaianPhone } from '@/lib/phone-validation'
 import { cn } from '@/lib/utils'
-import { MobileMenu } from '@/components/public/mobile-menu'
 
-export default function HomePage() {
-    const { theme, setTheme } = useTheme()
-    const [mounted, setMounted] = useState(false)
+export default function AuthPage() {
+    const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin')
 
-    useEffect(() => {
-        setMounted(true)
-    }, [])
+    // Sign-in form state
+    const [signInData, setSignInData] = useState({ email: '', password: '' })
+    const [showPassword, setShowPassword] = useState(false)
+    const [signInLoading, setSignInLoading] = useState(false)
+    const [signInError, setSignInError] = useState('')
+
+    // Sign-up form state
+    const [signUpData, setSignUpData] = useState({
+        fullName: '',
+        email: '',
+        phoneNumber: '',
+        password: ''
+    })
+    const [showSignUpPassword, setShowSignUpPassword] = useState(false)
+    const [signUpLoading, setSignUpLoading] = useState(false)
+    const [signUpError, setSignUpError] = useState('')
+    const [signUpSuccess, setSignUpSuccess] = useState(false)
+
+    const { signIn, signUp } = useAuth()
+    const router = useRouter()
+
+    const handleSignInChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target
+        setSignInData(prev => ({ ...prev, [name]: value }))
+    }
+
+    const handleSignUpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target
+        setSignUpData(prev => ({ ...prev, [name]: value }))
+    }
+
+    const handleSignInSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setSignInError('')
+        setSignInLoading(true)
+
+        try {
+            const { error } = await signIn(signInData.email, signInData.password)
+
+            if (error) {
+                setSignInError(error.message)
+                return
+            }
+
+            toast.success('Welcome back!')
+            window.location.href = '/dashboard'
+        } catch (err) {
+            setSignInError('An unexpected error occurred')
+        } finally {
+            setSignInLoading(false)
+        }
+    }
+
+    const handleSignUpSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setSignUpError('')
+
+        // Validate phone
+        const phoneValidation = validateGhanaianPhone(signUpData.phoneNumber)
+        if (!phoneValidation.isValid) {
+            setSignUpError(phoneValidation.error || 'Invalid phone number')
+            return
+        }
+
+        // Validate password
+        if (signUpData.password.length < 8) {
+            setSignUpError('Password must be at least 8 characters')
+            return
+        }
+
+        // Split full name
+        const nameParts = signUpData.fullName.trim().split(' ')
+        const firstName = nameParts[0]
+        const lastName = nameParts.slice(1).join(' ') || ''
+
+        setSignUpLoading(true)
+
+        try {
+            const { error, data } = await signUp({
+                email: signUpData.email,
+                password: signUpData.password,
+                firstName,
+                lastName,
+                phoneNumber: phoneValidation.normalizedNumber
+            })
+
+            if (error) {
+                setSignUpError(error.message)
+                return
+            }
+
+            // Send welcome email
+            fetch('/api/emails/welcome', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: signUpData.email,
+                    firstName,
+                    lastName,
+                    phoneNumber: phoneValidation.normalizedNumber
+                })
+            }).catch(err => console.error('Welcome email error:', err))
+
+            if (data?.session) {
+                toast.success('Account created! Logging in...')
+                router.push('/dashboard')
+                return
+            }
+
+            setSignUpSuccess(true)
+            toast.success('Account created successfully!')
+        } catch (err) {
+            setSignUpError('An unexpected error occurred')
+        } finally {
+            setSignUpLoading(false)
+        }
+    }
 
     return (
-        <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-
-            {/* Navigation Bar */}
-            <nav className="fixed top-0 w-full z-50 bg-white/95 dark:bg-card/95 backdrop-blur-sm border-b border-border shadow-sm transition-colors duration-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16">
-                        {/* Logo and Name */}
-                        <div className="flex items-center space-x-3">
-                            <div className="w-9 h-9 relative flex-shrink-0">
-                                <Image src="/logo.png" alt="Gamer Plug Logo" fill className="object-contain" priority />
-                            </div>
-                            <div className="flex flex-col hidden sm:flex">
-                                <span className="text-base font-black tracking-tight text-foreground leading-none">
-                                    GAMER PLUG
-                                </span>
-                                <span className="text-[9px] font-bold tracking-widest text-primary leading-none mt-0.5 uppercase">
-                                    SOLUTION
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Right Navigation Elements */}
-                        <div className="flex items-center space-x-2">
-                            {/* Theme Toggle Button */}
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-muted-foreground hover:text-foreground h-9 w-9 rounded-lg hidden sm:flex"
-                                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                            >
-                                {mounted && (theme === 'dark' ? (
-                                    <Sun className="w-4 h-4" />
-                                ) : (
-                                    <Moon className="w-4 h-4" />
-                                ))}
-                                <span className="sr-only">Toggle theme</span>
-                            </Button>
-
-                            <div className="hidden sm:flex items-center space-x-2">
-                                <Link href="/auth/login">
-                                    <Button variant="ghost" className="text-muted-foreground hover:text-foreground font-semibold h-9 px-4 rounded-lg">
-                                        Login
-                                    </Button>
-                                </Link>
-                                <Link href="/auth/signup">
-                                    <Button className="bg-primary hover:bg-primary/90 text-white font-semibold h-9 px-5 rounded-lg shadow-sm">
-                                        Get Started
-                                    </Button>
-                                </Link>
-                            </div>
-
-                            <MobileMenu />
-                        </div>
-                    </div>
+        <div className="min-h-screen bg-muted/40 flex flex-col items-center justify-center px-4 py-10">
+            {/* Logo and Header */}
+            <div className="mb-8 flex flex-col items-center gap-4 text-center">
+                <div className="w-20 h-20 rounded-full border-2 border-primary bg-white shadow-sm p-1 flex items-center justify-center">
+                    <Image
+                        src="/logo.png"
+                        alt="GAMER PLUG Logo"
+                        width={64}
+                        height={64}
+                        className="object-contain"
+                        priority
+                    />
                 </div>
-            </nav>
-
-            {/* Hero Section */}
-            <section className="relative pt-28 lg:pt-36 pb-20 px-4 sm:px-6 lg:px-8">
-                {/* Subtle background gradient */}
-                <div className="absolute inset-0 -z-10 bg-gradient-to-b from-blue-50/60 via-white to-white dark:from-primary/5 dark:via-background dark:to-background pointer-events-none" />
-
-                <div className="max-w-4xl mx-auto text-center animate-slideInUp">
-                    {/* Status Badge */}
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 dark:bg-primary/10 border border-blue-200 dark:border-primary/20 mb-8">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
-                        <span className="text-xs text-primary dark:text-primary font-semibold tracking-wide uppercase">
-                            Ghana&apos;s #1 Data Reseller &amp; Gaming Hub
-                        </span>
-                    </div>
-
-                    {/* Headline */}
-                    <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-foreground mb-6 leading-[1.08] tracking-tight">
-                        Power Up Your
-                        <br />
-                        <span className="text-primary">
-                            Connectivity
-                        </span>
+                <div>
+                    <h1 className="text-3xl font-black text-foreground mb-2 tracking-tight">
+                        GAMER PLUG
                     </h1>
-
-                    <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-                        Instant data bundles, airtime, and billing automation for MTN, Telecel, and AirtelTigo. Fast, affordable, and reliable — built for Ghana.
+                    <p className="text-sm text-muted-foreground font-medium">
+                        Sign in or create an account to get started.
                     </p>
-
-                    {/* CTAs */}
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-                        <Link href="/guest/purchase">
-                            <Button size="lg" className="bg-primary hover:bg-primary/90 text-white text-base px-8 h-12 rounded-lg font-semibold shadow-sm w-full sm:w-auto">
-                                Buy as Guest
-                                <Zap className="ml-2 w-4 h-4" />
-                            </Button>
-                        </Link>
-                        <Link href="/auth/signup">
-                            <Button size="lg" variant="outline" className="text-base px-8 h-12 rounded-lg font-semibold w-full sm:w-auto">
-                                Create Account
-                                <ArrowRight className="ml-2 w-4 h-4" />
-                            </Button>
-                        </Link>
-                    </div>
-
-                    <div className="mt-8 flex justify-center">
-                        <WhatsAppCTA />
-                    </div>
                 </div>
+            </div>
 
-                {/* Network Cards */}
-                <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto px-4 w-full">
-                    {[
-                        { name: 'MTN', borderColor: 'border-yellow-400/50 hover:border-yellow-400', bg: 'hover:bg-yellow-50/50 dark:hover:bg-yellow-500/5' },
-                        { name: 'Telecel', borderColor: 'border-red-400/50 hover:border-red-400', bg: 'hover:bg-red-50/50 dark:hover:bg-red-500/5' },
-                        { name: 'AT-iShare', borderColor: 'border-orange-400/50 hover:border-orange-400', bg: 'hover:bg-orange-50/50 dark:hover:bg-orange-500/5' },
-                        { name: 'AT-BigTime', borderColor: 'border-orange-500/50 hover:border-orange-500', bg: 'hover:bg-orange-50/50 dark:hover:bg-orange-500/5' },
-                    ].map((network) => (
-                        <div
-                            key={network.name}
+            {/* Auth Card */}
+            <Card className="w-full max-w-md border border-border shadow-md rounded-2xl overflow-hidden">
+                <CardContent className="p-6 space-y-6">
+                    {/* Tab Toggle */}
+                    <div className="flex gap-2 bg-muted/60 rounded-xl p-1 w-full">
+                        <button
+                            onClick={() => {
+                                setActiveTab('signin')
+                                setSignInError('')
+                            }}
                             className={cn(
-                                "group p-5 rounded-xl bg-white dark:bg-card border border-border shadow-sm",
-                                "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5",
-                                network.borderColor,
-                                network.bg,
-                                "flex flex-col items-center justify-center"
+                                'flex-1 py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-200',
+                                activeTab === 'signin'
+                                    ? 'bg-white text-foreground shadow-sm'
+                                    : 'bg-transparent text-muted-foreground hover:text-foreground'
                             )}
                         >
-                            <div className="flex items-center justify-center mb-3 transition-transform duration-200 group-hover:scale-105">
-                                <NetworkIcon network={network.name} size={56} />
-                            </div>
-                            <h3 className="text-sm font-bold text-foreground">{network.name}</h3>
-                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">Instant</p>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* Features Section */}
-            <section className="py-20 md:py-28 px-4 sm:px-6 lg:px-8 bg-muted/40 dark:bg-muted/20 border-t border-border">
-                <div className="max-w-6xl mx-auto">
-                    <div className="text-center mb-14">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-primary/10 text-primary border border-primary/20 mb-4 text-xs font-semibold uppercase tracking-wide">
-                            Why Choose Us
-                        </div>
-                        <h2 className="text-3xl md:text-4xl font-black text-foreground mb-4 tracking-tight">
-                            Why Gamer Plug <span className="text-primary">Solutions</span>?
-                        </h2>
-                        <p className="text-muted-foreground text-base max-w-xl mx-auto">
-                            Our next-generation telecom routing delivers unmatched speeds and reliability.
-                        </p>
+                            Sign in
+                        </button>
+                        <button
+                            onClick={() => {
+                                setActiveTab('signup')
+                                setSignUpError('')
+                            }}
+                            className={cn(
+                                'flex-1 py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-200',
+                                activeTab === 'signup'
+                                    ? 'bg-white text-foreground shadow-sm'
+                                    : 'bg-transparent text-muted-foreground hover:text-foreground'
+                            )}
+                        >
+                            Create account
+                        </button>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-6">
-                        {[
-                            {
-                                icon: Zap,
-                                title: 'Instant Delivery',
-                                description: 'Our custom API pipelines trigger dispatch in milliseconds. Your bundles land instantly, every time.',
-                                iconBg: 'bg-blue-600',
-                            },
-                            {
-                                icon: Shield,
-                                title: 'Secure Payments',
-                                description: 'Fully secured wallet architecture. Every cedi is guarded by cryptographically signed ledgers.',
-                                iconBg: 'bg-indigo-600',
-                            },
-                            {
-                                icon: Clock,
-                                title: '24/7 Uptime',
-                                description: 'Engineered with redundant fallbacks. If one gateway fails, the system automatically hot-swaps to another.',
-                                iconBg: 'bg-violet-600',
-                            },
-                        ].map((feature, index) => (
-                            <div
-                                key={index}
-                                className="group p-7 rounded-xl bg-white dark:bg-card border border-border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                    {/* Sign In Form */}
+                    {activeTab === 'signin' && !signUpSuccess && (
+                        <form onSubmit={handleSignInSubmit} className="space-y-4">
+                            {signInError && (
+                                <Alert variant="destructive" className="bg-destructive/10 border-destructive/50 py-2.5 rounded-lg">
+                                    <AlertDescription className="text-sm text-destructive flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse flex-shrink-0" />
+                                        {signInError}
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+
+                            <div className="space-y-2">
+                                <Label htmlFor="signin-email" className="text-sm font-medium text-foreground">
+                                    Email Address
+                                </Label>
+                                <div className="relative group">
+                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                    <Input
+                                        id="signin-email"
+                                        name="email"
+                                        type="email"
+                                        placeholder="your@email.com"
+                                        value={signInData.email}
+                                        onChange={handleSignInChange}
+                                        required
+                                        className="pl-11 h-11 text-base"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="signin-password" className="text-sm font-medium text-foreground">
+                                        Password
+                                    </Label>
+                                    <Link
+                                        href="/auth/reset-password"
+                                        className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                                    >
+                                        Forgot password?
+                                    </Link>
+                                </div>
+                                <div className="relative group">
+                                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                    <Input
+                                        id="signin-password"
+                                        name="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        placeholder="Enter your password"
+                                        value={signInData.password}
+                                        onChange={handleSignInChange}
+                                        required
+                                        className="pl-11 pr-11 h-11 text-base"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="w-5 h-5" />
+                                        ) : (
+                                            <Eye className="w-5 h-5" />
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <Button
+                                type="submit"
+                                disabled={signInLoading}
+                                className="w-full h-11 text-base font-semibold bg-primary hover:bg-primary/90 text-white rounded-lg transition-all"
                             >
-                                <div className={cn("w-11 h-11 rounded-lg flex items-center justify-center mb-6", feature.iconBg)}>
-                                    <feature.icon className="w-5 h-5 text-white" />
-                                </div>
-                                <h3 className="text-lg font-bold text-foreground mb-3">{feature.title}</h3>
-                                <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
+                                {signInLoading ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                        Signing in...
+                                    </>
+                                ) : (
+                                    'Sign in'
+                                )}
+                            </Button>
+                        </form>
+                    )}
 
-            {/* How It Works */}
-            <section className="py-20 md:py-28 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-6xl mx-auto">
-                    <div className="text-center mb-14">
-                        <h2 className="text-3xl md:text-4xl font-black text-foreground mb-4 tracking-tight">
-                            Get Started in <span className="text-primary">3 Steps</span>
-                        </h2>
-                        <p className="text-muted-foreground text-base max-w-sm mx-auto">
-                            Ready in under 60 seconds.
-                        </p>
-                    </div>
+                    {/* Create Account Form */}
+                    {activeTab === 'signup' && !signUpSuccess && (
+                        <form onSubmit={handleSignUpSubmit} className="space-y-4">
+                            {signUpError && (
+                                <Alert variant="destructive" className="bg-destructive/10 border-destructive/50 py-2.5 rounded-lg">
+                                    <AlertDescription className="text-sm text-destructive flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse flex-shrink-0" />
+                                        {signUpError}
+                                    </AlertDescription>
+                                </Alert>
+                            )}
 
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {[
-                            {
-                                step: '01',
-                                title: 'Create Account',
-                                description: 'Sign up securely with your details to create your Gamer Plug profile.',
-                                icon: Smartphone,
-                            },
-                            {
-                                step: '02',
-                                title: 'Fund Your Wallet',
-                                description: 'Deposit credits directly via Mobile Money or card channels.',
-                                icon: CreditCard,
-                            },
-                            {
-                                step: '03',
-                                title: 'Buy Data',
-                                description: 'Choose your bundle and complete the purchase instantly.',
-                                icon: CheckCircle2,
-                            },
-                        ].map((item, index) => (
-                            <div key={index} className="relative group">
-                                <div className="p-7 rounded-xl border border-border bg-white dark:bg-card shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                                    <div className="text-6xl font-black text-muted/30 dark:text-muted-foreground/10 absolute -top-6 -left-2 pointer-events-none select-none">
-                                        {item.step}
-                                    </div>
-                                    <div className="relative z-10 pt-2">
-                                        <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/15 flex items-center justify-center mb-5 group-hover:bg-primary/20 transition-colors border border-primary/20">
-                                            <item.icon className="w-5 h-5 text-primary" />
-                                        </div>
-                                        <h3 className="text-lg font-bold text-foreground mb-2">{item.title}</h3>
-                                        <p className="text-muted-foreground text-sm leading-relaxed">{item.description}</p>
-                                    </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="signup-fullname" className="text-sm font-medium text-foreground">
+                                    Full name
+                                </Label>
+                                <div className="relative group">
+                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                    <Input
+                                        id="signup-fullname"
+                                        name="fullName"
+                                        type="text"
+                                        placeholder="John Doe"
+                                        value={signUpData.fullName}
+                                        onChange={handleSignUpChange}
+                                        required
+                                        className="pl-11 h-11 text-base"
+                                    />
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
 
-            {/* CTA Panel */}
-            <section className="py-16 md:py-24 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-4xl mx-auto">
-                    <div className="relative overflow-hidden rounded-2xl p-10 lg:p-16 text-center bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 shadow-xl">
-                        <div className="absolute inset-0 bg-white/5 pointer-events-none" />
-
-                        <div className="relative z-10 flex flex-col items-center">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-blue-100 border border-white/20 mb-6 text-xs font-semibold uppercase tracking-wide">
-                                <Sparkles className="w-3.5 h-3.5" /> Get Started Free
+                            <div className="space-y-2">
+                                <Label htmlFor="signup-email" className="text-sm font-medium text-foreground">
+                                    Email Address
+                                </Label>
+                                <div className="relative group">
+                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                    <Input
+                                        id="signup-email"
+                                        name="email"
+                                        type="email"
+                                        placeholder="your@email.com"
+                                        value={signUpData.email}
+                                        onChange={handleSignUpChange}
+                                        required
+                                        className="pl-11 h-11 text-base"
+                                    />
+                                </div>
                             </div>
-                            <h2 className="text-3xl md:text-4xl font-black text-white mb-4 tracking-tight">
-                                Ready to Buy High-Speed Data?
-                            </h2>
-                            <p className="text-blue-100/80 text-base md:text-lg max-w-xl mx-auto mb-10 leading-relaxed">
-                                Unlock bulk pricing discounts, a secure developer API, and a fast dashboard — all in one place.
+
+                            <div className="space-y-2">
+                                <Label htmlFor="signup-phone" className="text-sm font-medium text-foreground">
+                                    Mobile Number
+                                </Label>
+                                <div className="relative group">
+                                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                    <Input
+                                        id="signup-phone"
+                                        name="phoneNumber"
+                                        type="tel"
+                                        placeholder="0541234567"
+                                        value={signUpData.phoneNumber}
+                                        onChange={handleSignUpChange}
+                                        required
+                                        className="pl-11 h-11 text-base"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="signup-password" className="text-sm font-medium text-foreground">
+                                    Password
+                                </Label>
+                                <div className="relative group">
+                                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                    <Input
+                                        id="signup-password"
+                                        name="password"
+                                        type={showSignUpPassword ? 'text' : 'password'}
+                                        placeholder="At least 8 characters"
+                                        value={signUpData.password}
+                                        onChange={handleSignUpChange}
+                                        required
+                                        className="pl-11 pr-11 h-11 text-base"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowSignUpPassword(!showSignUpPassword)}
+                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        {showSignUpPassword ? (
+                                            <EyeOff className="w-5 h-5" />
+                                        ) : (
+                                            <Eye className="w-5 h-5" />
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <Button
+                                type="submit"
+                                disabled={signUpLoading}
+                                className="w-full h-11 text-base font-semibold bg-primary hover:bg-primary/90 text-white rounded-lg transition-all"
+                            >
+                                {signUpLoading ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                        Creating...
+                                    </>
+                                ) : (
+                                    'Send verification code'
+                                )}
+                            </Button>
+
+                            <p className="text-xs text-center text-muted-foreground font-medium">
+                                By creating an account you agree to our{' '}
+                                <Link href="/terms" className="text-primary hover:text-primary/80 transition-colors">
+                                    Terms
+                                </Link>
+                                {' '}&{' '}
+                                <Link href="/privacy" className="text-primary hover:text-primary/80 transition-colors">
+                                    Privacy Policy
+                                </Link>
+                                .
                             </p>
-                            <Link href="/auth/signup">
-                                <Button size="lg" className="bg-white hover:bg-blue-50 text-blue-700 text-base px-10 h-12 rounded-lg font-bold shadow-lg transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5">
-                                    Create Free Account
-                                    <ArrowRight className="ml-2 w-4 h-4" />
-                                </Button>
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                        </form>
+                    )}
 
-            {/* Community Section */}
-            <section className="py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-muted/40 dark:bg-muted/20 border-t border-border">
-                <div className="max-w-3xl mx-auto text-center">
-                    <div className="mb-8">
-                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white dark:bg-card border border-border shadow-sm mb-5">
-                            <Image src="/logo.png" alt="Gamer Plug Logo" width={32} height={32} className="object-contain" />
+                    {/* Success State */}
+                    {signUpSuccess && (
+                        <div className="text-center py-4 space-y-4">
+                            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+                                <Mail className="w-8 h-8 text-green-600" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-foreground mb-2">Check Your Email</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    We've sent a verification link to <strong className="text-foreground">{signUpData.email}</strong>.
+                                </p>
+                            </div>
+                            <Button
+                                onClick={() => {
+                                    setSignUpSuccess(false)
+                                    setActiveTab('signin')
+                                    setSignUpData({ fullName: '', email: '', phoneNumber: '', password: '' })
+                                }}
+                                className="w-full h-11 text-base font-semibold bg-primary hover:bg-primary/90 text-white rounded-lg transition-all"
+                            >
+                                Back to Sign In
+                            </Button>
                         </div>
-                        <h3 className="font-black text-xl text-foreground tracking-tight mb-2">
-                            The Gamer Plug Community
-                        </h3>
-                        <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
-                            Connect with thousands of gamers and resellers. Get exclusive coupon drops, network updates, and platform release notes.
-                        </p>
-                    </div>
+                    )}
 
-                    <div className="bg-white dark:bg-card p-6 rounded-xl border border-border shadow-sm inline-block w-full max-w-xl">
-                        <WhatsAppCommunityButtons />
+                    {/* Encryption Badge */}
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mt-6 pt-6 border-t border-border">
+                        <Shield className="w-4 h-4" />
+                        <span>Secured with bank-grade encryption</span>
                     </div>
-                </div>
-            </section>
+                </CardContent>
+            </Card>
 
             {/* Footer */}
-            <footer className="py-10 px-4 sm:px-6 lg:px-8 border-t border-border bg-background">
-                <div className="max-w-7xl mx-auto">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center space-x-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                                <Gamepad2 className="w-4 h-4 text-white" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-sm font-black tracking-tight text-foreground leading-none">
-                                    GAMER PLUG
-                                </span>
-                                <span className="text-[8px] font-bold text-primary tracking-widest uppercase mt-0.5 leading-none">
-                                    SOLUTION
-                                </span>
-                            </div>
-                        </div>
-                        <p className="text-muted-foreground text-xs">
-                            © {new Date().getFullYear()} Gamer Plug Solution. All rights reserved.
-                        </p>
-                    </div>
-                </div>
-            </footer>
+            <p className="text-xs text-muted-foreground mt-8 text-center font-medium">
+                © 2025 Gamer Plug Solution · Built for data resellers
+            </p>
         </div>
     )
 }
