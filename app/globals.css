@@ -5,72 +5,57 @@
 @layer base {
   :root {
     /* ============================================ */
-    /* GAMER PLUG SOLUTION — Light Mode Tokens     */
-    /* Cyber-steel blue-white, silver accents      */
+    /* GAMER PLUG SOLUTION — Light Mode             */
+    /* Clean SaaS — white, cool grays, blue accent  */
     /* ============================================ */
-    --background: 210 30% 96%;
-    --foreground: 215 60% 8%;
+    --background: 0 0% 100%;
+    --foreground: 224 71% 4%;
     --card: 0 0% 100%;
-    --card-foreground: 215 60% 8%;
+    --card-foreground: 224 71% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 215 60% 8%;
-    /* Electric Cyber-Blue (from logo) */
-    --primary: 217 100% 56%;
+    --popover-foreground: 224 71% 4%;
+    /* Primary blue — clean & professional */
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
-    /* Cyber-Cyan Glow */
-    --secondary: 195 100% 50%;
-    --secondary-foreground: 215 60% 8%;
-    --muted: 210 30% 91%;
-    --muted-foreground: 215 20% 45%;
-    /* Chrome/Metallic Silver Accent */
-    --accent: 210 15% 75%;
-    --accent-foreground: 215 60% 8%;
-    /* Alert Red */
+    /* Secondary — cool light gray */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 9% 46%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 224 71% 4%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 215 25% 86%;
-    --input: 215 25% 86%;
-    --ring: 217 100% 56%;
-    --radius: 0.75rem;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 221 83% 53%;
+    --radius: 0.5rem;
   }
 
   .dark {
     /* ============================================ */
-    /* GAMER PLUG SOLUTION — Dark Mode Tokens      */
-    /* Deep metallic space-dark, neon blue/cyan    */
+    /* GAMER PLUG SOLUTION — Dark Mode              */
+    /* Deep navy surfaces, blue accent              */
     /* ============================================ */
-
-    /* Deep metallic charcoal — from the logo background */
-    --background: 220 25% 5%;
-    --foreground: 210 30% 95%;
-
-    /* Slightly elevated surface for cards */
-    --card: 220 28% 9%;
-    --card-foreground: 210 30% 95%;
-    --popover: 220 28% 9%;
-    --popover-foreground: 210 30% 95%;
-
-    /* Neon Electric Blue — the dominant logo color */
-    --primary: 217 100% 60%;
-    --primary-foreground: 220 25% 5%;
-
-    /* Neon Cyber-Cyan Glow */
-    --secondary: 195 100% 55%;
-    --secondary-foreground: 220 25% 5%;
-
-    --muted: 220 25% 14%;
-    --muted-foreground: 215 20% 60%;
-
-    /* Chrome / Metallic Silver */
-    --accent: 210 15% 70%;
-    --accent-foreground: 220 25% 5%;
-
-    /* Danger Alert */
-    --destructive: 0 80% 58%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 25% 16%;
-    --input: 220 25% 14%;
-    --ring: 217 100% 60%;
+    --background: 222 47% 11%;
+    --foreground: 213 31% 91%;
+    --card: 222 47% 14%;
+    --card-foreground: 213 31% 91%;
+    --popover: 222 47% 14%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 222 47% 18%;
+    --secondary-foreground: 213 31% 91%;
+    --muted: 222 47% 18%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 222 47% 18%;
+    --accent-foreground: 213 31% 91%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 213 31% 91%;
+    --border: 222 47% 18%;
+    --input: 222 47% 18%;
+    --ring: 217 91% 60%;
   }
 }
 
@@ -90,25 +75,6 @@
     width: 100%;
     max-width: 100vw;
     overscroll-behavior-y: none;
-    background-attachment: fixed;
-  }
-
-  /* Cyber grid scanline overlay on dark mode */
-  .dark body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    background-image:
-      linear-gradient(to right, hsl(217 100% 60% / 0.03) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(217 100% 60% / 0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-orbitron), sans-serif;
-    letter-spacing: -0.01em;
   }
 }
 
@@ -119,46 +85,20 @@
   /* ====================== */
 
   .glass-card {
-    @apply bg-white/80 dark:bg-black/50 backdrop-blur-xl
-           border border-slate-200/60 dark:border-blue-500/15
-           shadow-sm dark:shadow-xl transition-all duration-300;
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
-                0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    @apply bg-white dark:bg-card border border-border shadow-sm transition-all duration-200;
   }
 
   .village-card {
-    @apply bg-white dark:bg-[hsl(220_28%_9%)] backdrop-blur-2xl
-           border border-slate-200 dark:border-blue-500/20
-           shadow-md dark:shadow-2xl transition-all duration-300;
+    @apply bg-white dark:bg-card border border-border shadow-sm transition-all duration-200;
   }
 
-  /* ====================== */
-  /* Cyber Glow Card        */
-  /* ====================== */
   .cyber-card {
-    @apply relative overflow-hidden rounded-xl
-           bg-white dark:bg-[hsl(220_28%_9%)]
-           border border-blue-500/20 dark:border-blue-500/25
-           transition-all duration-500;
-  }
-
-  .cyber-card::before {
-    content: '';
-    @apply absolute inset-0 opacity-0 transition-opacity duration-500;
-    background: linear-gradient(135deg,
-      hsl(217 100% 60% / 0.08) 0%,
-      hsl(195 100% 55% / 0.04) 100%);
-    pointer-events: none;
+    @apply relative overflow-hidden rounded-xl bg-white dark:bg-card border border-border shadow-sm transition-all duration-200;
   }
 
   @media (min-width: 1024px) {
-    .cyber-card:hover::before {
-      @apply opacity-100;
-    }
     .cyber-card:hover {
-      @apply border-blue-500/50 -translate-y-1;
-      box-shadow: 0 0 20px hsl(217 100% 60% / 0.15),
-                  0 20px 40px hsl(0 0% 0% / 0.3);
+      @apply shadow-md border-primary/40 -translate-y-0.5;
     }
   }
 
@@ -167,28 +107,25 @@
   /* ====================== */
 
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(217 100% 56%) 0%, hsl(195 100% 50%) 100%);
+    background: linear-gradient(135deg, hsl(221 83% 53%) 0%, hsl(221 83% 45%) 100%);
     @apply text-white;
   }
 
   .gradient-cyber {
-    background: linear-gradient(135deg,
-      hsl(217 100% 60%) 0%,
-      hsl(240 80% 60%) 50%,
-      hsl(195 100% 55%) 100%);
+    background: linear-gradient(135deg, hsl(221 83% 53%) 0%, hsl(240 80% 55%) 100%);
     @apply text-white;
   }
 
   .gradient-success {
-    @apply bg-gradient-to-br from-emerald-400 to-emerald-600 text-white;
+    @apply bg-gradient-to-br from-emerald-500 to-emerald-600 text-white;
   }
 
   .gradient-warning {
-    @apply bg-gradient-to-br from-amber-400 to-orange-600 text-white;
+    @apply bg-gradient-to-br from-amber-500 to-orange-500 text-white;
   }
 
   .gradient-danger {
-    @apply bg-gradient-to-br from-rose-500 to-red-700 text-white;
+    @apply bg-gradient-to-br from-rose-500 to-red-600 text-white;
   }
 
   /* Network gradients */
@@ -206,50 +143,49 @@
 
   /* Network badges */
   .network-badge-mtn {
-    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300
-           border border-yellow-200 dark:border-yellow-700/50 backdrop-blur-md;
+    @apply bg-yellow-50 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300
+           border border-yellow-200 dark:border-yellow-700/40;
   }
 
   .network-badge-telecel {
-    @apply bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300
-           border border-red-200 dark:border-red-700/50 backdrop-blur-md;
+    @apply bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300
+           border border-red-200 dark:border-red-700/40;
   }
 
   .network-badge-airteltigo {
-    @apply bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300
-           border border-orange-200 dark:border-orange-700/50 backdrop-blur-md;
+    @apply bg-orange-50 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300
+           border border-orange-200 dark:border-orange-700/40;
   }
 
   /* Status chips */
   .status-pending {
-    @apply bg-amber-500/20 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400
-           border border-amber-500/30 backdrop-blur-md;
+    @apply bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400
+           border border-amber-200 dark:border-amber-500/30;
   }
 
   .status-processing {
-    @apply bg-blue-500/20 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400
-           border border-blue-500/30 backdrop-blur-md;
+    @apply bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400
+           border border-blue-200 dark:border-blue-500/30;
   }
 
   .status-completed {
-    @apply bg-emerald-500/20 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400
-           border border-emerald-500/30 backdrop-blur-md;
+    @apply bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400
+           border border-emerald-200 dark:border-emerald-500/30;
   }
 
   .status-failed {
-    @apply bg-destructive/20 text-destructive dark:bg-destructive/10 dark:text-destructive
-           border border-destructive/30 backdrop-blur-md;
+    @apply bg-red-50 text-destructive dark:bg-destructive/10 dark:text-destructive
+           border border-red-200 dark:border-destructive/30;
   }
 
   /* Interactive base card hover */
   .interactive-card {
-    @apply transition-all duration-500 ease-out;
+    @apply transition-all duration-200 ease-out;
   }
 
   @media (min-width: 1024px) {
     .interactive-card:hover {
-      @apply shadow-2xl -translate-y-2 border-primary/40 bg-white/60 dark:bg-gray-900/60;
-      box-shadow: 0 20px 40px -10px hsl(var(--primary) / 0.2);
+      @apply shadow-lg -translate-y-1 border-primary/30;
     }
   }
 
@@ -263,35 +199,24 @@
     @apply absolute inset-0 -translate-x-full;
     background: linear-gradient(90deg,
         transparent,
-        rgba(255, 255, 255, 0.25),
+        rgba(255, 255, 255, 0.4),
         transparent);
     animation: shimmer 2s infinite;
   }
 
   /* =============================== */
-  /* Cyber Neon Button               */
+  /* Primary Button (replaces cyber) */
   /* =============================== */
   .btn-cyber {
     @apply relative inline-flex items-center justify-center gap-2
-           px-6 py-3 rounded-lg font-semibold text-sm tracking-wide
-           text-white transition-all duration-300 overflow-hidden;
-    background: linear-gradient(135deg, hsl(217 100% 56%) 0%, hsl(195 100% 50%) 100%);
-  }
-
-  .btn-cyber::after {
-    content: '';
-    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
-    background: linear-gradient(135deg, hsl(217 100% 70%) 0%, hsl(195 100% 65%) 100%);
-  }
-
-  .btn-cyber:hover::after {
-    @apply opacity-100;
+           px-6 py-3 rounded-lg font-semibold text-sm
+           text-white transition-all duration-200 overflow-hidden;
+    background: hsl(221 83% 53%);
   }
 
   .btn-cyber:hover {
-    box-shadow: 0 0 20px hsl(217 100% 56% / 0.5),
-                0 8px 24px hsl(0 0% 0% / 0.3);
-    @apply -translate-y-0.5;
+    background: hsl(221 83% 45%);
+    @apply shadow-md -translate-y-px;
   }
 }
 
@@ -309,29 +234,49 @@
     display: none;
   }
 
-  /* Font utilities */
+  /* Font utilities — both now use Inter */
   .font-orbitron {
-    font-family: var(--font-orbitron), sans-serif;
+    font-family: var(--font-inter), sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
   }
 
   .font-rajdhani {
-    font-family: var(--font-rajdhani), sans-serif;
+    font-family: var(--font-inter), sans-serif;
   }
 
-  /* Cyber glow text */
-  .text-cyber-glow {
-    text-shadow: 0 0 10px hsl(217 100% 60% / 0.8),
-                 0 0 30px hsl(195 100% 55% / 0.5);
-  }
-
+  /* Text gradient utility */
   .text-gradient-cyber {
     @apply text-transparent bg-clip-text;
-    background-image: linear-gradient(135deg, hsl(217 100% 65%) 0%, hsl(195 100% 55%) 100%);
+    background-image: linear-gradient(135deg, hsl(221 83% 53%) 0%, hsl(221 83% 65%) 100%);
+  }
+
+  /* Replaced glow with subtle shadows */
+  .glow-primary {
+    box-shadow: 0 1px 3px 0 hsl(221 83% 53% / 0.2),
+                0 4px 12px 0 hsl(221 83% 53% / 0.1);
+  }
+
+  .glow-cyan {
+    box-shadow: 0 1px 3px 0 hsl(221 83% 60% / 0.2),
+                0 4px 12px 0 hsl(221 83% 60% / 0.1);
+  }
+
+  .glow-success {
+    box-shadow: 0 1px 3px 0 rgba(16, 185, 129, 0.2);
+  }
+
+  .glow-warning {
+    box-shadow: 0 1px 3px 0 rgba(245, 158, 11, 0.2);
+  }
+
+  .text-cyber-glow {
+    /* Removed neon glow — clean text */
   }
 }
 
 /* ============================================ */
-/* Custom scrollbar — cyber blue accent        */
+/* Custom scrollbar — subtle blue accent       */
 /* ============================================ */
 ::-webkit-scrollbar {
   width: 5px;
@@ -343,36 +288,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(217 100% 56% / 0.3);
+  background: hsl(220 13% 85%);
   border-radius: 9999px;
-  transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(217 100% 56% / 0.7);
-}
-
-/* ============================================ */
-/* Glow Effects                                */
-/* ============================================ */
-
-.glow-primary {
-  box-shadow: 0 0 15px hsl(217 100% 56% / 0.5),
-              0 0 40px hsl(217 100% 56% / 0.2),
-              inset 0 0 10px hsl(217 100% 56% / 0.1);
-}
-
-.glow-cyan {
-  box-shadow: 0 0 15px hsl(195 100% 50% / 0.5),
-              0 0 40px hsl(195 100% 50% / 0.2);
-}
-
-.glow-success {
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
-}
-
-.glow-warning {
-  box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+  background: hsl(221 83% 53% / 0.5);
 }
 
 /* ============================================ */
@@ -381,117 +302,101 @@
 
 .page-enter {
   opacity: 0;
-  filter: blur(8px);
-}
-
-@media (min-width: 768px) {
-  .page-enter {
-    transform: translateY(15px);
-  }
+  transform: translateY(8px);
 }
 
 .page-enter-active {
   opacity: 1;
   transform: translateY(0);
-  filter: blur(0);
-  transition: opacity 400ms, transform 400ms cubic-bezier(0.16, 1, 0.3, 1), filter 400ms;
+  transition: opacity 300ms, transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ============================================ */
-/* Driver.js Tutorial — Cyber Blue Theme       */
+/* Driver.js Tutorial — Clean Blue Theme       */
 /* ============================================ */
 
 .driver-active-element,
 .driver-highlighted-element {
-  box-shadow: 0 0 0 4px hsl(217 100% 56% / 0.4),
-              0 0 20px hsl(217 100% 56% / 0.3) !important;
+  box-shadow: 0 0 0 4px hsl(221 83% 53% / 0.3),
+              0 4px 16px hsl(221 83% 53% / 0.15) !important;
   border-radius: 0.5rem !important;
   z-index: 10000 !important;
 }
 
 .driver-popover {
-  background: transparent !important;
-  color: white !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: white !important;
+  color: hsl(224 71% 4%) !important;
+  border: 1px solid hsl(220 13% 91%) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12) !important;
+  border-radius: 0.75rem !important;
+  padding: 1.25rem !important;
   max-width: 320px !important;
 }
 
 .dark .driver-popover {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  background: hsl(222 47% 14%) !important;
+  color: hsl(213 31% 91%) !important;
+  border: 1px solid hsl(222 47% 18%) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
 }
 
 .driver-popover-title {
-  font-family: var(--font-orbitron), -apple-system, sans-serif !important;
-  font-size: 1.5rem !important;
-  font-weight: 900 !important;
-  /* Cyber Blue brand accent */
-  color: hsl(217 100% 70%) !important;
+  font-family: var(--font-inter), sans-serif !important;
+  font-size: 1.125rem !important;
+  font-weight: 700 !important;
+  color: hsl(224 71% 4%) !important;
   margin-bottom: 0.5rem !important;
-  line-height: 1.2 !important;
-  text-shadow: 2px 2px 3px #000000, 0 0 15px hsl(217 100% 60% / 0.8) !important;
-  letter-spacing: -0.01em !important;
+  line-height: 1.3 !important;
+}
+
+.dark .driver-popover-title {
+  color: hsl(213 31% 91%) !important;
 }
 
 .driver-popover-description {
-  font-family: var(--font-rajdhani), -apple-system, sans-serif !important;
-  font-size: 1.125rem !important;
-  font-weight: 600 !important;
-  color: #ffffff !important;
+  font-family: var(--font-inter), sans-serif !important;
+  font-size: 0.9rem !important;
+  font-weight: 400 !important;
+  color: hsl(220 9% 46%) !important;
   line-height: 1.6 !important;
-  margin-bottom: 1.5rem !important;
-  text-shadow: 1px 1px 2px #000000, 0 0 8px rgba(0, 0, 0, 0.8) !important;
+  margin-bottom: 1.25rem !important;
 }
 
-.driver-popover-description p,
-.driver-popover-description li,
-.driver-popover-description div {
-  font-weight: 600 !important;
-  text-shadow: 1px 1px 2px #000000, 0 0 8px rgba(0, 0, 0, 0.8) !important;
+.dark .driver-popover-description {
+  color: hsl(215 20% 65%) !important;
 }
 
 .driver-popover-description strong {
-  font-weight: 800 !important;
-  color: hsl(217 100% 70%) !important;
-}
-
-.driver-popover-description em {
   font-weight: 600 !important;
-  color: #F3F4F6 !important;
+  color: hsl(221 83% 53%) !important;
 }
 
 .driver-popover-close-btn {
-  color: rgba(255, 255, 255, 0.8) !important;
-  width: 32px !important;
-  height: 32px !important;
-  font-size: 1.5rem !important;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9) !important;
+  color: hsl(220 9% 46%) !important;
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 1.25rem !important;
 }
 
 .driver-popover-close-btn:hover {
-  color: hsl(217 100% 70%) !important;
-  background: transparent !important;
+  color: hsl(224 71% 4%) !important;
+  background: hsl(220 14% 96%) !important;
 }
 
 .driver-popover-footer {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 1rem !important;
+  gap: 0.75rem !important;
   margin-top: 0 !important;
   padding-top: 0 !important;
   border-top: none !important;
 }
 
 .driver-popover-progress-text {
-  color: rgba(255, 255, 255, 0.8) !important;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9) !important;
-  font-weight: 600 !important;
+  color: hsl(220 9% 46%) !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
 }
 
 .driver-popover-progress-text::after {
@@ -500,35 +405,35 @@
 
 .driver-popover-prev-btn,
 .driver-popover-next-btn {
-  background: rgba(255, 255, 255, 0.9) !important;
-  color: #0a1628 !important;
-  border: none !important;
-  padding: 0.75rem 1.5rem !important;
-  border-radius: 9999px !important;
-  font-weight: 700 !important;
-  font-size: 0.9rem !important;
+  background: hsl(220 14% 96%) !important;
+  color: hsl(224 71% 4%) !important;
+  border: 1px solid hsl(220 13% 91%) !important;
+  padding: 0.5rem 1.25rem !important;
+  border-radius: 0.375rem !important;
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
   cursor: pointer !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-  min-width: 90px !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
+  min-width: 80px !important;
 }
 
 .driver-popover-next-btn {
-  background: linear-gradient(135deg, hsl(217 100% 60%) 0%, hsl(195 100% 50%) 100%) !important;
+  background: hsl(221 83% 53%) !important;
   color: white !important;
+  border-color: hsl(221 83% 53%) !important;
 }
 
-.driver-popover-prev-btn:hover,
+.driver-popover-prev-btn:hover {
+  background: hsl(220 13% 91%) !important;
+}
+
 .driver-popover-next-btn:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4) !important;
+  background: hsl(221 83% 45%) !important;
 }
 
 .driver-active-element {
   border-radius: 0.5rem !important;
-  box-shadow: 0 0 0 4px hsl(217 100% 60% / 0.6),
-              0 0 30px hsl(217 100% 60% / 0.3) !important;
+  box-shadow: 0 0 0 3px hsl(221 83% 53% / 0.4),
+              0 4px 16px hsl(221 83% 53% / 0.15) !important;
   z-index: 100002 !important;
   opacity: 1 !important;
   pointer-events: auto !important;
@@ -536,67 +441,21 @@
 }
 
 .driver-overlay {
-  background-color: rgba(5, 10, 20, 0.9) !important;
-}
-
-.dark .driver-popover-title {
-  color: hsl(217 100% 70%) !important;
-}
-
-.dark .driver-popover-description {
-  color: white !important;
-}
-
-.dark .driver-popover-prev-btn {
-  background: rgba(255, 255, 255, 0.9) !important;
-  color: #0a1628 !important;
-}
-
-.dark .driver-popover-next-btn {
-  background: linear-gradient(135deg, hsl(217 100% 60%) 0%, hsl(195 100% 50%) 100%) !important;
-  color: white !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Mobile responsiveness */
 @media (max-width: 640px) {
   .driver-popover {
     max-width: 90% !important;
-    padding: 0 !important;
+    padding: 1rem !important;
     box-sizing: border-box !important;
-  }
-
-  .driver-popover-title {
-    font-size: 1.25rem !important;
-    text-align: center !important;
-  }
-
-  .driver-popover-description {
-    font-size: 0.95rem !important;
-    text-align: center !important;
-  }
-
-  .driver-popover-footer {
-    justify-content: center !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .driver-popover-title {
-    font-size: 1.1rem !important;
-    margin-bottom: 0.4rem !important;
-  }
-
-  .driver-popover-description {
-    font-size: 0.9rem !important;
-    line-height: 1.4 !important;
-    margin-bottom: 1rem !important;
   }
 
   .driver-popover-prev-btn,
   .driver-popover-next-btn {
-    padding: 0.5rem 0.8rem !important;
-    font-size: 0.75rem !important;
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.8rem !important;
     min-width: 60px !important;
-    height: 32px !important;
   }
 }

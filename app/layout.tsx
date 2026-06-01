@@ -5,27 +5,20 @@ export const viewport: Viewport = {
     initialScale: 1,
     maximumScale: 1,
     userScalable: false,
-    themeColor: '#0a1628',
+    themeColor: '#ffffff',
     interactiveWidget: 'resizes-content',
 }
-import { Orbitron, Rajdhani } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/contexts/auth-context'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 
-const orbitron = Orbitron({
-    weight: ['400', '500', '600', '700', '800', '900'],
+const inter = Inter({
+    weight: ['300', '400', '500', '600', '700', '800', '900'],
     subsets: ['latin'],
     display: 'swap',
-    variable: '--font-orbitron'
-})
-
-const rajdhani = Rajdhani({
-    weight: ['300', '400', '500', '600', '700'],
-    subsets: ['latin'],
-    display: 'swap',
-    variable: '--font-rajdhani'
+    variable: '--font-inter'
 })
 
 export const metadata: Metadata = {
@@ -53,10 +46,10 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en" suppressHydrationWarning>
-            <body className={`${orbitron.variable} ${rajdhani.variable} font-rajdhani`}>
+            <body className={`${inter.variable} font-sans`}>
                 <ThemeProvider
                     attribute="class"
-                    defaultTheme="dark"
+                    defaultTheme="light"
                     enableSystem
                     disableTransitionOnChange
                 >

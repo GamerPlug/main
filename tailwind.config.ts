@@ -18,6 +18,9 @@ const config = {
             },
         },
         extend: {
+            fontFamily: {
+                sans: ['var(--font-inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            },
             colors: {
                 border: "hsl(var(--border))",
                 input: "hsl(var(--input))",
@@ -52,32 +55,32 @@ const config = {
                     DEFAULT: "hsl(var(--card))",
                     foreground: "hsl(var(--card-foreground))",
                 },
-                // Network brand colors optimized for modern look
+                // Network brand colors
                 mtn: {
-                    DEFAULT: "#FACC15", // yellow-400
-                    dark: "#EAB308", // yellow-500
+                    DEFAULT: "#FACC15",
+                    dark: "#EAB308",
                 },
                 telecel: {
-                    DEFAULT: "#EF4444", // red-500
-                    dark: "#DC2626", // red-600
+                    DEFAULT: "#EF4444",
+                    dark: "#DC2626",
                 },
                 airteltigo: {
-                    DEFAULT: "#F97316", // orange-500
-                    dark: "#EA580C", // orange-600
+                    DEFAULT: "#F97316",
+                    dark: "#EA580C",
                 },
                 success: {
-                    DEFAULT: "#10B981", // emerald-500
+                    DEFAULT: "#10B981",
                     foreground: "#FFFFFF",
                 },
                 warning: {
-                    DEFAULT: "#F59E0B", // amber-500
+                    DEFAULT: "#F59E0B",
                     foreground: "#FFFFFF",
                 },
             },
             backgroundImage: {
                 'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-                'mesh-dark': 'radial-gradient(at 40% 20%, hsla(217,100%,60%,0.12) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(195,100%,55%,0.12) 0px, transparent 50%), radial-gradient(at 0% 50%, hsla(240,100%,60%,0.08) 0px, transparent 50%)',
-                'mesh-light': 'radial-gradient(at 40% 20%, hsla(217,100%,60%,0.15) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(195,100%,55%,0.15) 0px, transparent 50%), radial-gradient(at 0% 50%, hsla(240,100%,60%,0.1) 0px, transparent 50%)',
+                'mesh-light': 'radial-gradient(at 40% 20%, hsla(221,83%,53%,0.05) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(221,83%,53%,0.03) 0px, transparent 50%)',
+                'mesh-dark': 'radial-gradient(at 40% 20%, hsla(217,91%,60%,0.08) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(217,91%,60%,0.05) 0px, transparent 50%)',
             },
             borderRadius: {
                 lg: "var(--radius)",
@@ -99,31 +102,31 @@ const config = {
                 shimmer: {
                     "100%": { transform: "translateX(100%)" },
                 },
-                pulseGlow: {
-                    "0%, 100%": { opacity: "1", transform: "scale(1)", filter: "brightness(1)" },
-                    "50%": { opacity: ".85", transform: "scale(1.02)", filter: "brightness(1.1)" },
-                },
                 fadeIn: {
-                    from: { opacity: "0", filter: "blur(10px)" },
-                    to: { opacity: "1", filter: "blur(0)" },
+                    from: { opacity: "0", transform: "translateY(8px)" },
+                    to: { opacity: "1", transform: "translateY(0)" },
                 },
                 slideInUp: {
-                    from: { transform: "translateY(20px)", opacity: "0" },
+                    from: { transform: "translateY(16px)", opacity: "0" },
                     to: { transform: "translateY(0)", opacity: "1" },
                 },
                 float: {
                     "0%, 100%": { transform: "translateY(0)" },
-                    "50%": { transform: "translateY(-10px)" },
+                    "50%": { transform: "translateY(-6px)" },
+                },
+                pulseGlow: {
+                    "0%, 100%": { opacity: "1" },
+                    "50%": { opacity: ".7" },
                 },
             },
             animation: {
                 "accordion-down": "accordion-down 0.2s ease-out",
                 "accordion-up": "accordion-up 0.2s ease-out",
                 shimmer: "shimmer 2.5s infinite linear",
-                pulseGlow: "pulseGlow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-                fadeIn: "fadeIn 0.5s ease-out",
-                slideInUp: "slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
-                float: "float 6s ease-in-out infinite",
+                pulseGlow: "pulseGlow 2s ease-in-out infinite",
+                fadeIn: "fadeIn 0.4s ease-out",
+                slideInUp: "slideInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+                float: "float 5s ease-in-out infinite",
             },
         },
     },
