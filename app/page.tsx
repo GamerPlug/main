@@ -139,21 +139,23 @@ export default function AuthPage() {
     return (
         <div className="min-h-screen bg-muted/40 flex flex-col items-center justify-center px-4 py-10">
             {/* Logo and Header */}
-            <div className="mb-8 flex flex-col items-center gap-4 text-center">
-                <div className="w-20 h-20 rounded-full border-2 border-primary bg-white shadow-sm p-1 flex items-center justify-center">
+            <div className="mb-8 flex flex-col items-center gap-3 text-center">
+                <div className="relative w-24 h-24">
                     <Image
                         src="/logo.png"
                         alt="GAMER PLUG Logo"
-                        width={64}
-                        height={64}
-                        className="object-contain"
+                        fill
+                        className="rounded-full object-cover border-2 border-primary shadow-md"
                         priority
                     />
                 </div>
                 <div>
-                    <h1 className="text-3xl font-black text-foreground mb-2 tracking-tight">
-                        GAMER PLUG
+                    <h1 className="text-4xl font-black text-foreground mb-1 tracking-tight">
+                        Welcome to Gamer Plug
                     </h1>
+                    <p className="text-base text-muted-foreground font-semibold mb-1">
+                        Ghana's All-In-One Mobile Data & Reseller Platform
+                    </p>
                     <p className="text-sm text-muted-foreground font-medium">
                         Sign in or create an account to get started.
                     </p>
@@ -164,17 +166,17 @@ export default function AuthPage() {
             <Card className="w-full max-w-md border border-border shadow-md rounded-2xl overflow-hidden">
                 <CardContent className="p-6 space-y-6">
                     {/* Tab Toggle */}
-                    <div className="flex gap-2 bg-muted/60 rounded-xl p-1 w-full">
+                    <div className="flex gap-2 bg-muted/40 rounded-xl p-1 w-full border border-border">
                         <button
                             onClick={() => {
                                 setActiveTab('signin')
                                 setSignInError('')
                             }}
                             className={cn(
-                                'flex-1 py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-200',
+                                'flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all duration-300 cursor-pointer',
                                 activeTab === 'signin'
-                                    ? 'bg-white text-foreground shadow-sm'
-                                    : 'bg-transparent text-muted-foreground hover:text-foreground'
+                                    ? 'bg-primary text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105'
+                                    : 'bg-transparent text-foreground hover:bg-muted/60 hover:text-primary active:scale-95'
                             )}
                         >
                             Sign in
@@ -185,10 +187,10 @@ export default function AuthPage() {
                                 setSignUpError('')
                             }}
                             className={cn(
-                                'flex-1 py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-200',
+                                'flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all duration-300 cursor-pointer',
                                 activeTab === 'signup'
-                                    ? 'bg-white text-foreground shadow-sm'
-                                    : 'bg-transparent text-muted-foreground hover:text-foreground'
+                                    ? 'bg-primary text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105'
+                                    : 'bg-transparent text-foreground hover:bg-muted/60 hover:text-primary active:scale-95'
                             )}
                         >
                             Create account
@@ -391,7 +393,7 @@ export default function AuthPage() {
                                         Creating...
                                     </>
                                 ) : (
-                                    'Send verification code'
+                                    'Create Account'
                                 )}
                             </Button>
 
@@ -444,7 +446,7 @@ export default function AuthPage() {
 
             {/* Footer */}
             <p className="text-xs text-muted-foreground mt-8 text-center font-medium">
-                © 2025 Gamer Plug Solution · Built for data resellers
+                © 2026 Gamer Plug Solution · Built for data resellers
             </p>
         </div>
     )
