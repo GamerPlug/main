@@ -24,7 +24,6 @@ import {
     Shield,
     Crown,
     Star,
-    BadgeCheck,
     UserCircle,
     Plus,
     Code2,
@@ -42,7 +41,6 @@ const userNavItems = [
     { href: '/dashboard/data-packages', label: 'Data Packages', icon: Package },
     { href: '/dashboard/my-orders', label: 'Orders', icon: ShoppingCart },
     { href: '/dashboard/wallet', label: 'Wallet', icon: Wallet },
-    { href: '/dashboard/afa-orders', label: 'AFA Application', icon: BadgeCheck },
     { href: '/dashboard/complaints', label: 'Complaints', icon: MessageSquare },
     { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },
     { href: '/dashboard/profile', label: 'Profile', icon: User },
@@ -52,7 +50,6 @@ const userNavItems = [
 const adminNavItems = [
     { href: '/admin', label: 'Dashboard', icon: Shield },
     { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
-    { href: '/admin/afa-management', label: 'AFA Management', icon: BadgeCheck },
     { href: '/admin/users', label: 'Users', icon: Users },
     { href: '/admin/packages', label: 'Packages', icon: Package },
     { href: '/admin/complaints', label: 'Complaints', icon: MessageSquare },
@@ -69,9 +66,9 @@ import { roleConfig } from '@/lib/roles'
 
 export function DashboardSidebar() {
     const pathname = usePathname()
-    const { dbUser, isAdmin, isSubAdmin, signOut } = useAuth()
+    const { dbUser, isAdmin, signOut } = useAuth()
     const { isInternalSidebarOpen, closeSidebar } = useUI()
-    const { isPageAccessible, loading: pageAccessLoading } = usePageAccess()
+    const { isPageAccessible } = usePageAccess()
     const [isCollapsed, setIsCollapsed] = useState(false)
     const [walletBalance, setWalletBalance] = useState(0)
 
@@ -97,8 +94,8 @@ export function DashboardSidebar() {
     }
 
     // Get role config
-    const userRole = isAdmin ? 'admin' : isSubAdmin ? 'sub-admin' : (dbUser?.role || 'user') as keyof typeof roleConfig
-    const currentRole = roleConfig[userRole] || roleConfig['user']
+    const userRole = isAdmin ? 'admin' : (dbUser?.role || 'agent') as keyof typeof roleConfig
+    const currentRole = roleConfig[userRole] || roleConfig['agent']
     const RoleIcon = currentRole.icon
 
     return (
@@ -321,7 +318,7 @@ export function DashboardSidebar() {
                             })}
                     </div>
 
-                    {(isAdmin || isSubAdmin) && (
+                    {isAdmin && (
                         <>
                             {!isCollapsed && (
                                 <div className="mt-8 mb-3 px-3 flex items-center gap-3">
@@ -332,11 +329,7 @@ export function DashboardSidebar() {
                                 </div>
                             )}
                             <div className="space-y-1 mt-2">
-                                {adminNavItems.filter(item => {
-                                    if (isAdmin) return true
-                                    if (isSubAdmin) return ['/admin/orders', '/admin/users'].includes(item.href)
-                                    return false
-                                }).map((item) => {
+                                {adminNavItems.filter(() => isAdmin).map((item) => {
                                     const isActive = isLinkActive(item.href)
                                     return (
                                         <Link key={item.href} href={item.href} onClick={() => {

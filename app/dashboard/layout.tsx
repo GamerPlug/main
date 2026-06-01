@@ -3,7 +3,6 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SystemAnnouncementModal } from '@/components/system-announcement-modal'
-import { AgentExpiryModal } from '@/components/agent-expiry-modal'
 import { useAuth } from '@/contexts/auth-context'
 import { UIProvider } from '@/contexts/ui-context'
 import { DashboardSidebar } from '@/components/dashboard/sidebar'
@@ -24,7 +23,7 @@ export default function DashboardLayout({
 
     useEffect(() => {
         if (!isLoading && !user) {
-            router.push('/auth/login')
+            router.push('/')
         }
     }, [user, isLoading, router])
 
@@ -44,7 +43,7 @@ export default function DashboardLayout({
         return null
     }
 
-    const isSuspended = dbUser?.status === 'suspended' && (dbUser?.role === 'agent' || dbUser?.role === 'user')
+    const isSuspended = dbUser?.status === 'suspended' && (dbUser?.role === 'agent' || dbUser?.role === 'dealer')
 
     if (isSuspended) {
         return (
@@ -100,7 +99,6 @@ export default function DashboardLayout({
                     <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-[100px] opacity-30"></div>
                 </div>
                 <SystemAnnouncementModal />
-                <AgentExpiryModal />
                 <DashboardSidebar />
                 <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 lg:pl-[300px] relative z-10 w-full overflow-hidden">
                     <DashboardHeader />

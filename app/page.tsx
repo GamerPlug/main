@@ -122,8 +122,8 @@ export default function AuthPage() {
             }).catch(err => console.error('Welcome email error:', err))
 
             if (data?.session) {
-                toast.success('Account created! Logging in...')
-                router.push('/dashboard')
+                toast.success('Account created! Welcome to Gamer Plug 🎉')
+                window.location.href = '/dashboard'
                 return
             }
 
@@ -150,8 +150,9 @@ export default function AuthPage() {
                     />
                 </div>
                 <div>
-                    <h1 className="text-4xl font-black text-foreground mb-1 tracking-tight">
-                        Welcome to Gamer Plug
+                    <h1 className="text-2xl font-bold mb-1 tracking-tight whitespace-nowrap">
+                        <span className="text-slate-900">Welcome to Gamer </span>
+                        <span className="text-blue-700">Plug</span>
                     </h1>
                     <p className="text-base text-muted-foreground font-semibold mb-1">
                         Ghana's All-In-One Mobile Data & Reseller Platform
