@@ -34,9 +34,9 @@ const DOCS_CONTENT = [
         method: 'HEADER',
         endpoint: 'Authorization: Bearer <your_api_key>',
         details: 'API keys are managed in the Developer API section of your dashboard. Treat your API keys as passwords—keep them secret and never share them.',
-        curl: `curl -X GET "https://easydata.it.com/api/v1/user/balance" \\
+        curl: `curl -X GET "https://gamerplug.com/api/v1/user/balance" \\
   -H "Authorization: Bearer easy_live_..."`,
-        javascript: `const response = await fetch('https://easydata.it.com/api/v1/user/balance', {
+        javascript: `const response = await fetch('https://gamerplug.com/api/v1/user/balance', {
   headers: {
     'Authorization': 'Bearer easy_live_...'
   }
@@ -50,9 +50,9 @@ const data = await response.json();`
         method: 'GET',
         endpoint: '/user/balance',
         details: 'Returns your current wallet balance in GHS (Ghana Cedis).',
-        curl: `curl -X GET "https://easydata.it.com/api/v1/user/balance" \\
+        curl: `curl -X GET "https://gamerplug.com/api/v1/user/balance" \\
   -H "Authorization: Bearer easy_live_..."`,
-        javascript: `fetch('https://easydata.it.com/api/v1/user/balance', {
+        javascript: `fetch('https://gamerplug.com/api/v1/user/balance', {
   headers: {
     'Authorization': 'Bearer easy_live_...'
   }
@@ -74,9 +74,9 @@ const data = await response.json();`
         method: 'GET',
         endpoint: '/packages',
         details: 'The prices returned are automatically adjusted based on your user role (Agent, Dealer, etc.).',
-        curl: `curl -X GET "https://easydata.it.com/api/v1/packages" \\
+        curl: `curl -X GET "https://gamerplug.com/api/v1/packages" \\
   -H "Authorization: Bearer easy_live_..."`,
-        javascript: `const res = await fetch('https://easydata.it.com/api/v1/packages', {
+        javascript: `const res = await fetch('https://gamerplug.com/api/v1/packages', {
   headers: { 'Authorization': 'Bearer easy_live_...' }
 });
 const { packages } = await res.json();`,
@@ -101,7 +101,7 @@ const { packages } = await res.json();`,
         method: 'POST',
         endpoint: '/orders/purchase',
         details: 'Deducts from your wallet and triggers instant fulfillment. includes an optional idempotencyKey to prevent duplicate orders.',
-        curl: `curl -X POST "https://easydata.it.com/api/v1/orders/purchase" \\
+        curl: `curl -X POST "https://gamerplug.com/api/v1/orders/purchase" \\
   -H "Authorization: Bearer easy_live_..." \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -109,7 +109,7 @@ const { packages } = await res.json();`,
     "phoneNumber": "0240000000",
     "idempotencyKey": "unique_string_123"
   }'`,
-        javascript: `await fetch('https://easydata.it.com/api/v1/orders/purchase', {
+        javascript: `await fetch('https://gamerplug.com/api/v1/orders/purchase', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer easy_live_...',
@@ -142,9 +142,9 @@ const { packages } = await res.json();`,
         method: 'GET',
         endpoint: '/orders/status?reference=ED-XXXX',
         details: 'Search by internal orderId or the readable reference_code.',
-        curl: `curl -X GET "https://easydata.it.com/api/v1/orders/status?reference=ED-XXXX" \\
+        curl: `curl -X GET "https://gamerplug.com/api/v1/orders/status?reference=ED-XXXX" \\
   -H "Authorization: Bearer easy_live_..."`,
-        javascript: `const res = await fetch('https://easydata.it.com/api/v1/orders/status?reference=ED-XXXX', {
+        javascript: `const res = await fetch('https://gamerplug.com/api/v1/orders/status?reference=ED-XXXX', {
   headers: { 'Authorization': 'Bearer easy_live_...' }
 });`,
         response: `{
@@ -183,7 +183,7 @@ export default function ApiDocsPage() {
                     <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
                         Documentation <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] uppercase font-black tracking-widest h-6 px-3">v1.0 API</Badge>
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400 font-bold mt-2">Comprehensive guide to integrating EasyData API into your ecosystem.</p>
+                    <p className="text-slate-500 dark:text-slate-400 font-bold mt-2">Comprehensive guide to integrating Gamer Plug API into your ecosystem.</p>
                 </div>
             </div>
 
@@ -302,7 +302,7 @@ export default function ApiDocsPage() {
                                 </section>
                             </div>
                         )
-                    ))}
+                     ))}
 
                     <div className="mt-20 pt-12 border-t-2 border-slate-100 dark:border-white/5 text-center">
                         <div className="inline-flex flex-col items-center max-w-sm">
@@ -313,7 +313,7 @@ export default function ApiDocsPage() {
                             <p className="text-sm font-bold text-slate-500 mb-8 leading-relaxed">
                                 Our API is built to scale with your business. If you encounter any issues during integration, our engineering team is here to help.
                             </p>
-                            <Link href="mailto:support@easydata.com">
+                            <Link href="mailto:support@gamerplug.com">
                                 <Button className="px-8 h-12 rounded-xl gradient-primary font-black uppercase tracking-widest text-xs shadow-xl hover:glow-primary">
                                     Contact API Support
                                 </Button>

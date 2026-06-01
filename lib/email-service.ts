@@ -2,7 +2,7 @@
  * Brevo Email Service
  * 
  * This service handles all transactional emails using Brevo (formerly Sendinblue).
- * Premium high-end email templates for KING FLEXY DATA LTD.
+ * Premium high-end email templates for GAMER PLUG SOLUTION.
  */
 
 // @ts-ignore - Brevo SDK doesn't have complete type definitions
@@ -18,8 +18,8 @@ apiInstance.setApiKey(SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey, process.
 
 // Sender configuration
 const DEFAULT_SENDER = {
-    name: process.env.BREVO_SENDER_NAME || 'EASYDATA',
-    email: process.env.BREVO_SENDER_EMAIL || 'noreply@EASYDATA.com'
+    name: process.env.BREVO_SENDER_NAME || 'GAMER PLUG',
+    email: process.env.BREVO_SENDER_EMAIL || 'noreply@gamerplug.com'
 }
 
 interface SendEmailOptions {
@@ -429,8 +429,8 @@ function generatePremiumTemplate(title: string, content: string, accentColor: st
                     <div class="logo-icon">
                         <span class="logo-text">K</span>
                     </div>
-                    <div className="brand-name">EASYDATA</div>
-                    <div className="brand-tagline">Premium Data Solutions</div>
+                    <div className="brand-name">GAMER PLUG</div>
+                    <div className="brand-tagline">Premium Data & Gaming Solutions</div>
                 </div>
             </div>
             <div class="content">
@@ -440,15 +440,15 @@ function generatePremiumTemplate(title: string, content: string, accentColor: st
                 <div class="footer-links">
                     <a href="${process.env.NEXT_PUBLIC_APP_URL}" class="footer-link">Website</a>
                     <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" class="footer-link">Dashboard</a>
-                    <a href="mailto:support@EASYDATA.com" class="footer-link">Support</a>
+                    <a href="mailto:support@gamerplug.com" class="footer-link">Support</a>
                 </div>
                 <p class="footer-text">
                     Questions? Reply to this email or contact us at<br>
-                    <strong>support@EASYDATA.com</strong>
+                    <strong>support@gamerplug.com</strong>
                 </p>
                 <p class="footer-copyright">
-                    © ${new Date().getFullYear()} EASYDATA. All rights reserved.<br>
-                    Ghana's Premium Data Reseller Platform
+                    © ${new Date().getFullYear()} GAMER PLUG. All rights reserved.<br>
+                    Ghana's Premium Data & Gaming Platform
                 </p>
             </div>
         </div>
@@ -473,8 +473,8 @@ export async function sendWelcomeEmail(
         <p class="subtitle">Your premium data journey begins now</p>
         
         <p className="message-text">
-            Thank you for joining <strong>EASYDATA</strong> – Ghana's most trusted 
-            premium data reseller platform. Your account has been successfully created and 
+            Thank you for joining <strong>GAMER PLUG</strong> – Ghana's most trusted 
+            premium data reseller and gaming platform. Your account has been successfully created and 
             you're now part of an exclusive community.
         </p>
         
@@ -518,7 +518,7 @@ export async function sendWelcomeEmail(
     return sendEmail({
         to: email,
         toName: firstName,
-        subject: `Welcome to EASYDATA, ${firstName}! 🎉`,
+        subject: `Welcome to GAMER PLUG, ${firstName}! 🎉`,
         htmlContent: generatePremiumTemplate('Welcome', content)
     })
 }

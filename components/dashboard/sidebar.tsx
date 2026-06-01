@@ -133,7 +133,7 @@ export function DashboardSidebar() {
                             <div className="w-full h-full rounded-xl bg-white/80 dark:bg-black/60 backdrop-blur-md border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-xl relative z-10">
                                 <Image
                                     src="/logo.png"
-                                    alt="EASYDATA"
+                                    alt="GAMER PLUG"
                                     fill
                                     className="object-contain p-1.5 drop-shadow-lg"
                                     priority
@@ -148,10 +148,10 @@ export function DashboardSidebar() {
                         </div>
                         {!isCollapsed && (
                             <div className="flex flex-col transition-transform duration-500 group-hover:translate-x-1">
-                                <span className="text-lg font-black tracking-tight text-slate-900 dark:text-white drop-shadow-sm">
-                                    EASYDATA
+                                <span className="text-lg font-black tracking-wider text-slate-900 dark:text-white drop-shadow-sm font-orbitron uppercase">
+                                    GAMER PLUG
                                 </span>
-                                <span className="text-[10px] font-bold text-primary uppercase tracking-widest drop-shadow-[0_0_8px_rgba(225,0,255,0.2)] dark:drop-shadow-[0_0_8px_rgba(225,0,255,0.4)]">PREMIUM DATA</span>
+                                <span className="text-[9px] font-black text-primary uppercase tracking-widest drop-shadow-[0_0_8px_rgba(225,0,255,0.2)] dark:drop-shadow-[0_0_8px_rgba(225,0,255,0.4)] font-orbitron">SOLUTION</span>
                             </div>
                         )}
                     </Link>

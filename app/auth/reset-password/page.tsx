@@ -53,8 +53,8 @@ export default function ResetPasswordPage() {
                         <div className="absolute inset-0 bg-primary/40 rounded-2xl blur-xl transition-colors"></div>
                         <Activity className="w-8 h-8 text-white relative z-10" />
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-white/60 tracking-tight drop-shadow-sm mb-2">
-                        EASYDATA
+                    <h1 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-white/60 tracking-tight drop-shadow-sm mb-2 font-orbitron">
+                        GAMER PLUG
                     </h1>
                     <p className="text-slate-400 font-medium text-sm sm:text-base">No worries! We'll help you get back in.</p>
                 </div>

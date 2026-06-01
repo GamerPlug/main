@@ -76,8 +76,8 @@ const config = {
             },
             backgroundImage: {
                 'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-                'mesh-dark': 'radial-gradient(at 40% 20%, hsla(240,100%,74%,0.15) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(189,100%,56%,0.15) 0px, transparent 50%), radial-gradient(at 0% 50%, hsla(330,100%,71%,0.15) 0px, transparent 50%)',
-                'mesh-light': 'radial-gradient(at 40% 20%, hsla(240,100%,74%,0.2) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(189,100%,56%,0.2) 0px, transparent 50%), radial-gradient(at 0% 50%, hsla(330,100%,71%,0.2) 0px, transparent 50%)',
+                'mesh-dark': 'radial-gradient(at 40% 20%, hsla(217,100%,60%,0.12) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(195,100%,55%,0.12) 0px, transparent 50%), radial-gradient(at 0% 50%, hsla(240,100%,60%,0.08) 0px, transparent 50%)',
+                'mesh-light': 'radial-gradient(at 40% 20%, hsla(217,100%,60%,0.15) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(195,100%,55%,0.15) 0px, transparent 50%), radial-gradient(at 0% 50%, hsla(240,100%,60%,0.1) 0px, transparent 50%)',
             },
             borderRadius: {
                 lg: "var(--radius)",

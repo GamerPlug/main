@@ -14,13 +14,13 @@ export function SuspendedAccount() {
         const cleanNumber = (num: string) => num.replace(/\+/g, '').replace(/\s/g, '')
         const rawNumber = settings.contactWhatsApp || settings.contactPhone || '233578065809'
         const PHONE_NUMBER = cleanNumber(rawNumber)
-        const message = encodeURIComponent(`Hello Support, my EASYDATA account is suspended. Please help me resolve this. (User: ${dbUser?.email || ''})`)
+        const message = encodeURIComponent(`Hello Support, my GAMER PLUG account is suspended. Please help me resolve this. (User: ${dbUser?.email || ''})`)
         window.open(`https://wa.me/${PHONE_NUMBER}?text=${message}`, '_blank')
     }
 
     return (
         <div className="min-h-[80vh] flex items-center justify-center p-4">
-            <Card className="max-w-md w-full border-red-200 shadow-2xl dark:border-red-900/30 overflow-hidden">
+            <Card className="max-w-md w-full border-red-200 shadow-2xl dark:border-red-900/30 overflow-hidden bg-white dark:bg-[hsl(220_28%_9%)]">
                 <div className="h-2 bg-red-600 w-full" />
                 <CardContent className="p-8 text-center space-y-6">
                     <div className="flex justify-center">
@@ -30,8 +30,8 @@ export function SuspendedAccount() {
                     </div>
 
                     <div className="space-y-2">
-                        <h1 className="text-2xl font-black text-slate-900 mb-2">EASYDATA</h1>
-                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
+                        <h1 className="text-2xl font-black tracking-wider text-slate-900 dark:text-white font-orbitron uppercase">GAMER PLUG</h1>
+                        <h2 className="text-xl font-black text-slate-900 dark:text-red-500 uppercase tracking-tight font-sans">
                             YOUR ACCOUNT IS SUSPENDED
                         </h2>
                         <p className="text-slate-600 dark:text-slate-400 font-medium">
@@ -49,8 +49,8 @@ export function SuspendedAccount() {
                         </Button>
                     </div>
 
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold pt-4 border-t border-slate-100 dark:border-slate-800">
-                        EASYDATA Support System
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold pt-4 border-t border-slate-100 dark:border-slate-800 font-orbitron">
+                        GAMER PLUG Support System
                     </p>
                 </CardContent>
             </Card>

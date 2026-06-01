@@ -466,7 +466,7 @@ export default function AdminOrdersPage() {
             }
 
             // Get the filename from the backend response (includes admin name)
-            const fileName = result.filename || `EASYDATA_orders_${new Date().toISOString().replace(/[:.]/g, '-')}.xlsx`
+            const fileName = result.filename || `GAMERPLUG_orders_${new Date().toISOString().replace(/[:.]/g, '-')}.xlsx`
 
             // 3. Perform export - CUSTOM FORMAT (Beneficiary Msisdn / GIGGS)
             const rows: any[][] = []
@@ -652,7 +652,7 @@ export default function AdminOrdersPage() {
                 return
             }
 
-            const prefix = exportMode === 'standard' ? 'EASYDATA_merged' : `EASYDATA_${exportMode}`
+            const prefix = exportMode === 'standard' ? 'GAMERPLUG_merged' : `GAMERPLUG_${exportMode}`
             const filename = `${prefix}_${historyFilter}_${new Date().toISOString().substring(0, 10)}.xlsx`
 
             await generateExcelFile(allOrders, filename, exportMode)
@@ -773,7 +773,7 @@ export default function AdminOrdersPage() {
                         </CardTitle>
                         <div className="flex gap-2 mt-1">
                             <Badge variant="outline" className="w-fit text-[10px] py-0">{displayNetwork}</Badge>
-                            {batch.filename.includes('EASYDATA_') && !batch.filename.includes('EASYDATA_orders_') && (
+                            {batch.filename.includes('GAMERPLUG_') && !batch.filename.includes('GAMERPLUG_orders_') && (
                                 <Badge variant="secondary" className="w-fit text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 py-0">
                                     Only {batch.filename.split('_')[1]}
                                 </Badge>
