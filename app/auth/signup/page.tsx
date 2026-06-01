@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -19,6 +19,12 @@ import { WhatsAppCommunityButtons } from '@/components/whatsapp-community-button
 import { useSettings } from '@/hooks/use-settings'
 
 export default function SignupPage() {
+    const router = useRouter()
+
+    useEffect(() => {
+        router.replace('/')
+    }, [router])
+
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -33,7 +39,6 @@ export default function SignupPage() {
     const [success, setSuccess] = useState(false)
     const { signUp } = useAuth()
     const { settings } = useSettings()
-    const router = useRouter()
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => ({
