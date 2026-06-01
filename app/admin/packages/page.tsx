@@ -302,14 +302,14 @@ export default function AdminPackagesPage() {
                                                 <div className="flex flex-col gap-1">
                                                     <p className="text-2xl font-bold text-primary">{formatCurrency(pkg.price)}</p>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {pkg.dealer_price > 0 && (
+                                                        {(pkg.dealer_price ?? 0) > 0 && (
                                                             <Badge variant="outline" className="text-[10px] text-purple-600 border-purple-200 bg-purple-50">
-                                                                Dealer: {formatCurrency(pkg.dealer_price)}
+                                                                Dealer: {formatCurrency(pkg.dealer_price ?? 0)}
                                                             </Badge>
                                                         )}
-                                                        {pkg.agent_price > 0 && (
+                                                        {(pkg.agent_price ?? 0) > 0 && (
                                                             <Badge variant="outline" className="text-[10px] text-yellow-600 border-yellow-200 bg-yellow-50">
-                                                                Agent: {formatCurrency(pkg.agent_price)}
+                                                                Agent: {formatCurrency(pkg.agent_price ?? 0)}
                                                             </Badge>
                                                         )}
                                                     </div>
