@@ -146,7 +146,7 @@ export default function AdminSettingsPage() {
         <div className="space-y-6 max-w-4xl">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">EASYDATA Settings</h1>
+                    <h1 className="text-2xl font-bold text-slate-900">GAMER PLUG Settings</h1>
                     <p className="text-muted-foreground">Configure detailed platform parameters</p>
                 </div>
                 <Button onClick={saveSettings} disabled={saving}>
@@ -176,7 +176,7 @@ export default function AdminSettingsPage() {
                                 <Input
                                     value={supportEmail}
                                     onChange={(e) => setSupportEmail(e.target.value)}
-                                    placeholder="support@EASYDATA.com"
+                                    placeholder="support@gamerplug.com"
                                 />
                             </div>
 

@@ -1,5 +1,5 @@
 -- ============================================================
--- EASYDATA - Consolidated Database Clone Script
+-- GAMER PLUG SOLUTION - Consolidated Database Clone Script
 -- This script contains the full schema, indexes, triggers, 
 -- RLS policies, and RPC functions required for the project.
 -- Run this in your new Supabase Project's SQL Editor.
@@ -37,7 +37,7 @@ BEGIN
         EXECUTE 'ALTER TABLE public.users DROP CONSTRAINT ' || cname;
     END IF;
     ALTER TABLE public.users ADD CONSTRAINT user_role_check
-    CHECK (role IN ('admin', 'sub-admin', 'agent', 'customer', 'user'));
+    CHECK (role IN ('admin', 'sub-admin', 'platinum', 'super dealer', 'dealer', 'super agent', 'agent', 'user'));
 END $$;
 
 -- ============================================================
@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS public.wallets (
     balance DECIMAL(12,2) DEFAULT 0,
     total_credited DECIMAL(12,2) DEFAULT 0,
     total_spent DECIMAL(12,2) DEFAULT 0,
+    credit_limit DECIMAL(12,2) DEFAULT 0,
+    unlimited_credit BOOLEAN DEFAULT false,
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT unique_user_wallet UNIQUE (user_id)
 );
@@ -206,7 +208,10 @@ INSERT INTO public.admin_settings (key, value) VALUES
     ('agent_upgrade_price',          '100'),
     ('afa_price_customer',           '15'),
     ('afa_price_agent',              '15'),
-    ('support_email',                'support@mdatagh.com'),
+    ('support_email',                'support@gamerplug.com'),
+    ('support_whatsapp',             ''),
+    ('whatsapp_group_link',          ''),
+    ('whatsapp_channel_link',        ''),
     ('auto_fulfillment_enabled',     'true'),
     ('page_access_dashboard',        'true'),
     ('page_access_data_packages',    'true'),
@@ -264,6 +269,76 @@ CREATE TABLE IF NOT EXISTS public.afa_orders (
 
 
 -- ============================================================
+-- 15. API KEYS (Developer API access)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.api_keys (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    key_hash TEXT NOT NULL UNIQUE,
+    key_prefix TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    last_used_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================
+-- 16. MEMBERSHIPS (Upgrade tiers / subscriptions)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.memberships (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    payment_reference TEXT,
+    amount_paid DECIMAL(12,2) DEFAULT 0,
+    activated_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    status TEXT DEFAULT 'active',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================
+-- 17. MTN LOGS (MTN fulfillment audit trail)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.mtn_logs (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    order_id UUID REFERENCES public.orders(id) ON DELETE SET NULL,
+    request_payload JSONB,
+    response_payload JSONB,
+    status TEXT,
+    error_message TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================
+-- 18. ISHARE LOGS (AirtelTigo iShare fulfillment audit trail)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.ishare_logs (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    order_id UUID REFERENCES public.orders(id) ON DELETE SET NULL,
+    request_payload JSONB,
+    response_payload JSONB,
+    status TEXT,
+    error_message TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================
+-- 19. PROFITS HISTORY (Admin profit tracking)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.profits_history (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    order_id UUID REFERENCES public.orders(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    network TEXT,
+    sale_price DECIMAL(12,2) DEFAULT 0,
+    cost_price DECIMAL(12,2) DEFAULT 0,
+    profit DECIMAL(12,2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================
 -- INDEXES
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_orders_user_id        ON public.orders(user_id);
@@ -279,6 +354,12 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user     ON public.notifications(us
 CREATE INDEX IF NOT EXISTS idx_complaints_user        ON public.complaints(user_id);
 CREATE INDEX IF NOT EXISTS idx_customer_purch_user    ON public.customer_purchases(user_id);
 CREATE INDEX IF NOT EXISTS idx_afa_orders_user        ON public.afa_orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_api_keys_user          ON public.api_keys(user_id);
+CREATE INDEX IF NOT EXISTS idx_api_keys_hash          ON public.api_keys(key_hash);
+CREATE INDEX IF NOT EXISTS idx_memberships_user       ON public.memberships(user_id);
+CREATE INDEX IF NOT EXISTS idx_mtn_logs_order         ON public.mtn_logs(order_id);
+CREATE INDEX IF NOT EXISTS idx_ishare_logs_order      ON public.ishare_logs(order_id);
+CREATE INDEX IF NOT EXISTS idx_profits_history_order  ON public.profits_history(order_id);
 
 
 -- ============================================================
@@ -294,7 +375,7 @@ BEGIN
         new.raw_user_meta_data->>'first_name',
         new.raw_user_meta_data->>'last_name',
         new.raw_user_meta_data->>'phone_number',
-        COALESCE(new.raw_user_meta_data->>'role', 'customer'),
+        COALESCE(new.raw_user_meta_data->>'role', 'user'),
         'active',
         NOW(),
         NOW()
@@ -587,6 +668,64 @@ CREATE POLICY "Admins can manage all afa orders" ON public.afa_orders
     );
 
 
+-- ---------- API KEYS ----------
+ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage own api keys" ON public.api_keys;
+DROP POLICY IF EXISTS "Admins can manage all api keys" ON public.api_keys;
+
+CREATE POLICY "Users can manage own api keys" ON public.api_keys
+    FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can manage all api keys" ON public.api_keys
+    FOR ALL USING (
+        EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'sub-admin'))
+    );
+
+-- ---------- MEMBERSHIPS ----------
+ALTER TABLE public.memberships ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own memberships" ON public.memberships;
+DROP POLICY IF EXISTS "Admins can manage all memberships" ON public.memberships;
+
+CREATE POLICY "Users can view own memberships" ON public.memberships
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can manage all memberships" ON public.memberships
+    FOR ALL USING (
+        EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'sub-admin'))
+    );
+
+-- ---------- MTN LOGS ----------
+ALTER TABLE public.mtn_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can manage mtn logs" ON public.mtn_logs;
+
+CREATE POLICY "Admins can manage mtn logs" ON public.mtn_logs
+    FOR ALL USING (
+        EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'sub-admin'))
+    );
+
+-- ---------- ISHARE LOGS ----------
+ALTER TABLE public.ishare_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can manage ishare logs" ON public.ishare_logs;
+
+CREATE POLICY "Admins can manage ishare logs" ON public.ishare_logs
+    FOR ALL USING (
+        EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'sub-admin'))
+    );
+
+-- ---------- PROFITS HISTORY ----------
+ALTER TABLE public.profits_history ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can manage profits history" ON public.profits_history;
+
+CREATE POLICY "Admins can manage profits history" ON public.profits_history
+    FOR ALL USING (
+        EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'sub-admin'))
+    );
+
 -- ============================================================
 -- RPC FUNCTIONS: ATOMIC WALLET OPERATIONS
 -- ============================================================
@@ -691,5 +830,5 @@ $$;
 
 
 -- ============================================================
--- DONE! Your MDataGH database is fully set up.
+-- DONE! Your GAMER PLUG SOLUTION database is fully set up.
 -- ============================================================

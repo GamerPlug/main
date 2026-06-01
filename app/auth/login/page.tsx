@@ -63,15 +63,15 @@ export default function LoginPage() {
                             <div className="w-full h-full rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-2xl relative z-10">
                                 <Image
                                     src="/logo.png"
-                                    alt="EASYDATA"
+                                    alt="GAMER PLUG"
                                     fill
                                     className="object-contain p-2 drop-shadow-lg"
                                     priority
                                 />
                             </div>
                         </div>
-                        <h1 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-white/60 tracking-tight drop-shadow-sm">
-                            EASYDATA
+                        <h1 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-white/60 tracking-tight drop-shadow-sm font-orbitron">
+                            GAMER PLUG
                         </h1>
                         <p className="text-base text-slate-400 mt-2 font-medium">
                             Sign in to continue

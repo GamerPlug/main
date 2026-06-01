@@ -15,7 +15,7 @@ export function FloatingWhatsApp({ variant = 'default' }: FloatingWhatsAppProps)
     // WhatsApp Number Selection (Use contactWhatsApp, or contactPhone as fallback, or finally admin default)
     const rawNumber = settings.contactWhatsApp || settings.contactPhone || '233578065809'
     const PHONE_NUMBER = cleanNumber(rawNumber)
-    const message = encodeURIComponent("Hello Support, I need some assistance with EASYDATA.")
+    const message = encodeURIComponent("Hello Support, I need some assistance with GAMER PLUG.")
     const WHATSAPP_URL = `https://wa.me/${PHONE_NUMBER}?text=${message}`
 
     const [isVisible, setIsVisible] = useState(true)

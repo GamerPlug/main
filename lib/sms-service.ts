@@ -45,7 +45,7 @@ validateSMSConfig()
  */
 export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
     const apiKey = process.env.MOOLRE_API_KEY
-    const defaultSender = process.env.MOOLRE_SENDER_ID || 'EASYDATA'
+    const defaultSender = process.env.MOOLRE_SENDER_ID || 'GAMERPLUG'
 
     // Strict validation - no fallback
     if (!apiKey) {
@@ -191,7 +191,7 @@ export async function sendOrderSuccessSMS(
     // Updated Template: "Your order for [Data Size] has been received and is being processed. You will receive your data in less than 1hr thank you."
     const message = `Your order for ${details.size} has been received and is being processed. You will receive your data in less than 1hr thank you.
 
-EASYDATA`
+GAMER PLUG`
 
     return sendSMS({
         recipient: details.recipientNumber,
@@ -235,7 +235,7 @@ export async function sendWalletTopupSuccessSMS(
     // Updated Template: "Hello! You have added GH[Amount] to your Flexy-Wallet. Your Flexy-Wallet is now GH[New_Balance]"
     const message = `Hello! You have added GH${details.amount.toFixed(2)} to your Flexy-Wallet. Your Flexy-Wallet is now GH${details.newBalance.toFixed(2)}
 
-EASYDATA`
+GAMER PLUG`
 
     return sendSMS({
         recipient: phoneNumber,
@@ -253,7 +253,7 @@ export async function sendWelcomeSMS(
 ) {
     // DISABLED AS REQUESTED
     /*
-    const message = `Hello! Welcome to EASYDATA. All we do here is instant Delivery (PA-TU-PA) start ordering your package now. Chat us on WhatsApp:578065809`
+    const message = `Hello! Welcome to GAMER PLUG. All we do here is instant Delivery (PA-TU-PA) start ordering your package now. Chat us on WhatsApp:578065809`
 
     return sendSMS({
         recipient: phoneNumber,
@@ -263,7 +263,7 @@ export async function sendWelcomeSMS(
     return { success: true, messageId: 'disabled', error: undefined }
 }/**
  * Send Role upgrade success SMS
- * Template: "Congratulations! Your [Role] membership has been activated. You now have access to exclusive pricing and features. EASYDATA"
+ * Template: "Congratulations! Your [Role] membership has been activated. You now have access to exclusive pricing and features. GAMER PLUG"
  */
 export async function sendRoleUpgradeSuccessSMS(
     phoneNumber: string,
@@ -273,7 +273,7 @@ export async function sendRoleUpgradeSuccessSMS(
     const roleName = role.charAt(0).toUpperCase() + role.slice(1)
     const message = `Congratulations! Your ${roleName} membership has been activated. You now have access to exclusive pricing and features.
     
-EASYDATA`
+GAMER PLUG`
 
     return sendSMS({
         recipient: phoneNumber,
@@ -312,7 +312,7 @@ export async function sendOrderRefundSMS(
 
     const message = `Your order for ${displayNumber} has been refunded due to an error. Refund was GH${refundAmount.toFixed(2)}. Your new Flexy-wallet is now GH${newBalance.toFixed(2)} thank you.
 
-EASYDATA`
+GAMER PLUG`
 
     return sendSMS({
         recipient: phoneNumber,
@@ -332,7 +332,7 @@ export async function sendAgentExtensionSuccessSMS(
         month: 'short', 
         year: 'numeric' 
     })
-    const message = `Congratulations! Your Agent Role has been successfully extended until ${date}. Thank you for choosing EASYDATA.`
+    const message = `Congratulations! Your Agent Role has been successfully extended until ${date}. Thank you for choosing GAMER PLUG.`
 
     return sendSMS({
         recipient: phoneNumber,
@@ -349,7 +349,7 @@ export async function sendAgentExpiryNotificationSMS(
 ) {
     const message = `Hello ${firstName}, your Agent Role plan has expired. Kindly extend your plan to continue enjoying the benefits. Thank you.
     
-EASYDATA`
+GAMER PLUG`
 
     return sendSMS({
         recipient: phoneNumber,
@@ -366,7 +366,7 @@ export async function sendAgentRenewalReminderSMS(
 ) {
     const message = `Your Agent Role plan is about to expire, kindly extend your plan to continue enjoying the benefits. Thank you.
     
-EASYDATA`
+GAMER PLUG`
 
     return sendSMS({
         recipient: phoneNumber,

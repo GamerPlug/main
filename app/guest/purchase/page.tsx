@@ -216,9 +216,9 @@ function GuestPurchaseContent() {
             {/* Header */}
             <header className="fixed top-0 w-full z-40 bg-black/60 backdrop-blur-3xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
                 <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-                    <Link href="/" className="flex items-center space-x-3 group text-xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-white/70 tracking-tight">
+                    <Link href="/" className="flex items-center space-x-3 group text-xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-white/70 tracking-tight font-orbitron">
                         <ArrowLeft className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />
-                        <span>EASYDATA</span>
+                        <span>GAMER PLUG</span>
                     </Link>
                     <div className="flex items-center space-x-2">
                         <div className="hidden sm:flex items-center space-x-4">

@@ -290,7 +290,7 @@ export default function DeveloperPage() {
                                     Use the following base URL for all v1 API calls:
                                 </p>
                                 <div className="bg-black/90 p-4 rounded-xl font-mono text-[11px] text-white shadow-2xl relative group/code overflow-x-auto mx-7">
-                                    <pre className="text-cyan-400">https://easydata.it.com/api/v1</pre>
+                                    <pre className="text-cyan-400">https://gamerplug.com/api/v1</pre>
                                 </div>
                             </div>
 

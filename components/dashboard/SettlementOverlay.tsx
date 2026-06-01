@@ -19,7 +19,7 @@ export function SettlementOverlay({ amount }: SettlementOverlayProps) {
         const cleanNumber = (num: string) => num.replace(/\+/g, '').replace(/\s/g, '')
         const rawNumber = settings.contactWhatsApp || settings.contactPhone || '233578065809'
         const PHONE_NUMBER = cleanNumber(rawNumber)
-        const message = encodeURIComponent(`Hello Support, I have a settlement of GHS ${Math.abs(amount).toFixed(2)} to clear on my EASYDATA account. Please verify my payment and reactivate my account. (User: ${dbUser?.email || ''})`)
+        const message = encodeURIComponent(`Hello Support, I have a settlement of GHS ${Math.abs(amount).toFixed(2)} to clear on my GAMER PLUG account. Please verify my payment and reactivate my account. (User: ${dbUser?.email || ''})`)
         window.open(`https://wa.me/${PHONE_NUMBER}?text=${message}`, '_blank')
     }
 
@@ -31,7 +31,7 @@ export function SettlementOverlay({ amount }: SettlementOverlayProps) {
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
             <Card className="max-w-md w-full border-primary/20 shadow-2xl overflow-hidden bg-slate-900/90 text-white border-2 border-indigo-500/30">
-                <div className="h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 w-full" />
+                <div className="h-2 bg-gradient-to-r from-indigo-500 via-primary to-secondary w-full" />
                 <CardContent className="p-8 text-center space-y-6">
                     <div className="flex justify-center">
                         <div className="w-20 h-20 bg-indigo-500/20 rounded-full flex items-center justify-center border-2 border-indigo-500/40 animate-pulse">
@@ -40,8 +40,8 @@ export function SettlementOverlay({ amount }: SettlementOverlayProps) {
                     </div>
 
                     <div className="space-y-2">
-                        <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-                            EASYDATA
+                        <h1 className="text-3xl font-black tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400 font-orbitron uppercase">
+                            GAMER PLUG
                         </h1>
                         <h2 className="text-xl font-bold uppercase tracking-tight text-slate-100">
                             Daily Settlement Required
@@ -78,8 +78,8 @@ export function SettlementOverlay({ amount }: SettlementOverlayProps) {
                         </Button>
                     </div>
 
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold pt-4 border-t border-white/5">
-                        EASYDATA Settlement Enforcement System
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold pt-4 border-t border-white/5 font-orbitron">
+                        GAMER PLUG Settlement Enforcement System
                     </p>
                 </CardContent>
             </Card>

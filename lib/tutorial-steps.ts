@@ -55,7 +55,7 @@ export function getDashboardTutorialSteps(userRole: UserRole, whatsappGroupLink?
     // Welcome
     {
       popover: {
-        title: userRole === 'agent' ? '👋 Welcome Agent!' : '👋 Welcome to EASYDATA!',
+        title: userRole === 'agent' ? '👋 Welcome Agent!' : '👋 Welcome to GAMER PLUG!',
         description: `
           <div>
             <p>${userRole === 'agent' ? 'Welcome to your Agent Dashboard! Let\'s explore the features available to you.' : 'Let\'s take a quick tour of your dashboard and learn how to use the platform.'}</p>
@@ -153,7 +153,7 @@ export function getOrderHistoryTutorialSteps(whatsappGroupLink?: string, whatsap
     {
       element: '.logo-container',
       popover: {
-        title: '👋 Welcome to EASYDATA!',
+        title: '👋 Welcome to GAMER PLUG!',
         description: 'Let us show you around.',
       }
     },
