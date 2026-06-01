@@ -50,11 +50,8 @@ interface PackageFormData {
     network: typeof NETWORKS[number]
     size: string
     price: number
-    agent_price: number
-    super_agent_price: number
     dealer_price: number
-    super_dealer_price: number
-    platinum_price: number
+    agent_price: number
     cost_price: number
     description: string
     is_available: boolean
@@ -65,11 +62,8 @@ const defaultFormData: PackageFormData = {
     network: 'MTN',
     size: '',
     price: 0,
-    agent_price: 0,
-    super_agent_price: 0,
     dealer_price: 0,
-    super_dealer_price: 0,
-    platinum_price: 0,
+    agent_price: 0,
     cost_price: 0,
     description: '',
     is_available: true,
@@ -133,11 +127,8 @@ export default function AdminPackagesPage() {
             network: pkg.network as any,
             size: pkg.size,
             price: pkg.price,
-            agent_price: (pkg as any).agent_price || 0,
-            super_agent_price: (pkg as any).super_agent_price || 0,
-            dealer_price: (pkg as any).dealer_price || 0,
-            super_dealer_price: (pkg as any).super_dealer_price || 0,
-            platinum_price: (pkg as any).platinum_price || 0,
+            dealer_price: pkg.dealer_price || 0,
+            agent_price: pkg.agent_price || 0,
             cost_price: (pkg as any).cost_price || 0,
             description: pkg.description || '',
             is_available: pkg.is_available,
@@ -311,29 +302,14 @@ export default function AdminPackagesPage() {
                                                 <div className="flex flex-col gap-1">
                                                     <p className="text-2xl font-bold text-primary">{formatCurrency(pkg.price)}</p>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {(pkg as any).platinum_price > 0 && (
-                                                            <Badge variant="outline" className="text-[10px] text-cyan-600 border-cyan-200 bg-cyan-50">
-                                                                Platinum: {formatCurrency((pkg as any).platinum_price)}
-                                                            </Badge>
-                                                        )}
-                                                        {(pkg as any).super_dealer_price > 0 && (
-                                                            <Badge variant="outline" className="text-[10px] text-indigo-600 border-indigo-200 bg-indigo-50">
-                                                                S-Dealer: {formatCurrency((pkg as any).super_dealer_price)}
-                                                            </Badge>
-                                                        )}
-                                                        {(pkg as any).dealer_price > 0 && (
+                                                        {pkg.dealer_price > 0 && (
                                                             <Badge variant="outline" className="text-[10px] text-purple-600 border-purple-200 bg-purple-50">
-                                                                Dealer: {formatCurrency((pkg as any).dealer_price)}
+                                                                Dealer: {formatCurrency(pkg.dealer_price)}
                                                             </Badge>
                                                         )}
-                                                        {(pkg as any).super_agent_price > 0 && (
-                                                            <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-200 bg-emerald-50">
-                                                                S-Agent: {formatCurrency((pkg as any).super_agent_price)}
-                                                            </Badge>
-                                                        )}
-                                                        {(pkg as any).agent_price > 0 && (
+                                                        {pkg.agent_price > 0 && (
                                                             <Badge variant="outline" className="text-[10px] text-yellow-600 border-yellow-200 bg-yellow-50">
-                                                                Agent: {formatCurrency((pkg as any).agent_price)}
+                                                                Agent: {formatCurrency(pkg.agent_price)}
                                                             </Badge>
                                                         )}
                                                     </div>
@@ -433,32 +409,11 @@ export default function AdminPackagesPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-cyan-600 font-bold">Platinum Price</Label>
-                                <Input
-                                    type="number"
-                                    value={formData.platinum_price}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, platinum_price: parseFloat(e.target.value) || 0 }))}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
                                 <Label className="text-purple-600 font-bold">Dealer Price</Label>
                                 <Input
                                     type="number"
                                     value={formData.dealer_price}
                                     onChange={(e) => setFormData(prev => ({ ...prev, dealer_price: parseFloat(e.target.value) || 0 }))}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-indigo-600 font-bold">Super Dealer Price</Label>
-                                <Input
-                                    type="number"
-                                    value={formData.super_dealer_price}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, super_dealer_price: parseFloat(e.target.value) || 0 }))}
                                     placeholder="0.00"
                                 />
                             </div>
@@ -474,16 +429,6 @@ export default function AdminPackagesPage() {
                                     placeholder="0.00"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label className="text-emerald-600 font-bold">Super Agent Price</Label>
-                                <Input
-                                    type="number"
-                                    value={formData.super_agent_price}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, super_agent_price: parseFloat(e.target.value) || 0 }))}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                        </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">

@@ -107,19 +107,12 @@ export async function POST(request: NextRequest) {
             }, { status: 403 })
         }
 
-        const role = (userData as any)?.role || 'user'
+        const role = (userData as any)?.role || 'agent'
 
-        // Determine price to charge based on role
+        // Determine price based on role
         let priceToCharge = (pkg as any).price
-        
-        if (role === 'platinum' && (pkg as any).platinum_price > 0) {
-            priceToCharge = (pkg as any).platinum_price
-        } else if (role === 'super dealer' && (pkg as any).super_dealer_price > 0) {
-            priceToCharge = (pkg as any).super_dealer_price
-        } else if (role === 'dealer' && (pkg as any).dealer_price > 0) {
+        if (role === 'dealer' && (pkg as any).dealer_price > 0) {
             priceToCharge = (pkg as any).dealer_price
-        } else if (role === 'super agent' && (pkg as any).super_agent_price > 0) {
-            priceToCharge = (pkg as any).super_agent_price
         } else if (role === 'agent' && (pkg as any).agent_price > 0) {
             priceToCharge = (pkg as any).agent_price
         }
@@ -218,7 +211,7 @@ export async function POST(request: NextRequest) {
                 const userRole = (userData as any).role
 
                 // Send order success email to user (skip for admin/sub-admin)
-                const isAdminUser = userRole === 'admin' || userRole === 'sub-admin'
+                const isAdminUser = userRole === 'admin'
                 if (!isAdminUser) {
                     sendOrderSuccessEmail(
                         userEmail,
@@ -251,7 +244,7 @@ export async function POST(request: NextRequest) {
                 // Send new order alert to admin
                 // Check if user is agent for SMS alert
                 // We already checked userRoleData earlier
-                const isAgentOrDealer = ['agent', 'super agent', 'dealer', 'super dealer', 'platinum'].includes(userRole)
+                const isAgentOrDealer = ['agent', 'dealer'].includes(userRole)
                 if (isAgentOrDealer) {
                     sendAdminAgentOrderAlert()
                         .catch((err: Error) => console.error('[Order] Agent Admin SMS alert error:', err))

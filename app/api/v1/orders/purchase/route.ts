@@ -98,10 +98,7 @@ export async function POST(request: NextRequest) {
 
         // 7. Determine Price
         let priceToCharge = (pkg as any).price
-        if (role === 'platinum' && (pkg as any).platinum_price > 0) priceToCharge = (pkg as any).platinum_price
-        else if (role === 'super dealer' && (pkg as any).super_dealer_price > 0) priceToCharge = (pkg as any).super_dealer_price
-        else if (role === 'dealer' && (pkg as any).dealer_price > 0) priceToCharge = (pkg as any).dealer_price
-        else if (role === 'super agent' && (pkg as any).super_agent_price > 0) priceToCharge = (pkg as any).super_agent_price
+        if (role === 'dealer' && (pkg as any).dealer_price > 0) priceToCharge = (pkg as any).dealer_price
         else if (role === 'agent' && (pkg as any).agent_price > 0) priceToCharge = (pkg as any).agent_price
 
         // 8. Atomic Wallet Deduction

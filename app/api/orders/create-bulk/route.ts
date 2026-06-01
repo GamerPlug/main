@@ -64,10 +64,10 @@ export async function POST(request: NextRequest) {
             .single()
 
         const userRole = (userData as any).role
-        const isSpecialRole = ['admin', 'sub-admin', 'super dealer', 'dealer', 'super agent', 'agent', 'platinum'].includes(userRole)
-        
+        const isSpecialRole = ['admin', 'dealer', 'agent'].includes(userRole)
+
         if (!userData || !isSpecialRole) {
-            return NextResponse.json({ error: 'Bulk orders are only available for agents, dealers, and platinum members' }, { status: 403 })
+            return NextResponse.json({ error: 'Bulk orders are only available for agents and dealers' }, { status: 403 })
         }
 
         if ((userData as any).requires_settlement) {
@@ -169,22 +169,13 @@ export async function POST(request: NextRequest) {
             }
 
             const role = userRole
-            // Calculate effective price
+            // Calculate effective price based on role
             let price = (pkg as any).price
-            
-            if (role === 'platinum' && (pkg as any).platinum_price > 0) {
-                price = (pkg as any).platinum_price
-            } else if (role === 'super dealer' && (pkg as any).super_dealer_price > 0) {
-                price = (pkg as any).super_dealer_price
-            } else if (role === 'dealer' && (pkg as any).dealer_price > 0) {
+            if (role === 'dealer' && (pkg as any).dealer_price > 0) {
                 price = (pkg as any).dealer_price
-            } else if (role === 'super agent' && (pkg as any).super_agent_price > 0) {
-                price = (pkg as any).super_agent_price
             } else if (role === 'agent' && (pkg as any).agent_price > 0) {
                 price = (pkg as any).agent_price
             }
-            // Joseph: Added dealer check
-            // Joseph: Added dealer price check
             const referenceCode = generateReferenceCode()
 
             validatedOrders.push({ order, pkg, price, referenceCode })
@@ -358,7 +349,7 @@ export async function POST(request: NextRequest) {
         // Send email/SMS notifications
         try {
             // Send single admin agent order alert for the batch
-            const isAgentOrDealer = ['agent', 'super agent', 'dealer', 'super dealer', 'platinum'].includes(userRole)
+            const isAgentOrDealer = ['agent', 'dealer'].includes(userRole)
             if (isAgentOrDealer) {
                 sendAdminAgentOrderAlert()
                     .catch((err: Error) => console.error('[BulkOrder] Agent Admin SMS alert error:', err))
