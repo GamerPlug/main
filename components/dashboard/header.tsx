@@ -63,8 +63,8 @@ export function DashboardHeader() {
         <header className={cn(
             "sticky top-0 z-40 h-16 backdrop-blur-xl border-b transition-all duration-300",
             dbUser?.role === 'agent'
-                ? "bg-yellow-50/80 dark:bg-slate-950/80 border-yellow-200/50 dark:border-white/10 shadow-sm dark:shadow-[0_4px_30px_rgba(234,179,8,0.15)]"
-                : "bg-white/80 dark:bg-black/60 border-slate-200 dark:border-white/5 shadow-sm dark:shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
+                ? "bg-yellow-50 dark:bg-card border-yellow-200/60 dark:border-border shadow-sm"
+                : "bg-white dark:bg-card border-border shadow-sm"
         )}>
             <div className="h-full px-4 lg:px-8 flex items-center justify-between">
                 {/* Mobile Menu Button */}

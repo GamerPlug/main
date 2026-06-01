@@ -116,10 +116,10 @@ export function DashboardSidebar() {
                 className={cn(
                     "fixed left-0 top-0 z-50 h-full flex flex-col transition-all duration-300 ease-in-out border-r",
                     (dbUser?.role === 'agent')
-                        ? "bg-yellow-50/80 dark:bg-slate-950/80 backdrop-blur-2xl border-yellow-200/50 dark:border-white/10 shadow-[4px_0_24px_-4px_rgba(234,179,8,0.1)] text-slate-900 dark:text-white"
+                        ? "bg-yellow-50 dark:bg-card border-yellow-200/60 dark:border-border text-foreground"
                         : (dbUser?.role === 'dealer')
-                            ? "bg-purple-50/80 dark:bg-slate-950/80 backdrop-blur-2xl border-purple-200/50 dark:border-white/10 shadow-[4px_0_24px_-4px_rgba(168,85,247,0.1)] text-slate-900 dark:text-white"
-                            : "bg-white/80 dark:bg-black/80 backdrop-blur-2xl border-slate-200 dark:border-white/5 shadow-sm dark:shadow-[4px_0_24px_-4px_rgba(0,0,0,0.3)] text-slate-900 dark:text-white",
+                            ? "bg-purple-50 dark:bg-card border-purple-200/60 dark:border-border text-foreground"
+                            : "bg-white dark:bg-card border-border text-foreground shadow-sm",
                     isCollapsed ? "w-20" : "w-[280px] sm:w-[300px]",
                     "transform lg:transform-none pt-4 pb-4",
                     isInternalSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
