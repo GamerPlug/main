@@ -69,7 +69,7 @@ export default function DataPackagesPage() {
     const router = useRouter()
 
     // Tutorial hook
-    const userRole = ['agent', 'super agent', 'dealer', 'super dealer', 'platinum'].includes(dbUser?.role || '') ? 'agent' : 'user'
+    const userRole = ['agent', 'dealer'].includes(dbUser?.role || '') ? 'agent' : 'user'
     const { startTutorial } = useTutorial(userRole as 'user' | 'agent', '/data-packages')
     // Joseph: all special roles use agent tutorial
 
@@ -188,25 +188,11 @@ export default function DataPackagesPage() {
         setFilteredPackages(filtered)
     }
 
-    // Helper function to get effective price based on user role
+    // Returns the price appropriate for the user's role
     const getEffectivePrice = (pkg: DataPackage) => {
-        const role = dbUser?.role || 'user'
-        
-        if (role === 'platinum' && (pkg as any).platinum_price > 0) {
-            return (pkg as any).platinum_price
-        }
-        if (role === 'super dealer' && (pkg as any).super_dealer_price > 0) {
-            return (pkg as any).super_dealer_price
-        }
-        if (role === 'dealer' && (pkg as any).dealer_price > 0) {
-            return (pkg as any).dealer_price
-        }
-        if (role === 'super agent' && (pkg as any).super_agent_price > 0) {
-            return (pkg as any).super_agent_price
-        }
-        if (role === 'agent' && (pkg as any).agent_price > 0) {
-            return (pkg as any).agent_price
-        }
+        const role = dbUser?.role || 'agent'
+        if (role === 'dealer' && pkg.dealer_price && pkg.dealer_price > 0) return pkg.dealer_price
+        if (role === 'agent' && pkg.agent_price && pkg.agent_price > 0) return pkg.agent_price
         return pkg.price
     }
 
@@ -619,15 +605,13 @@ export default function DataPackagesPage() {
                 </div>
 
                 {/* Bulk Order Section - Agents & Dealers */}
-                {(['agent', 'super agent', 'dealer', 'super dealer', 'platinum'].includes(dbUser?.role || '')) && (
+                {(['agent', 'dealer'].includes(dbUser?.role || '')) && (
                     <div id="bulk-order-section" className="w-full max-w-3xl mx-auto space-y-4 relative z-10">
                         {/* New Glow Header Box */}
                         <div className={cn(
                             "relative overflow-hidden group rounded-[2rem] p-6 shadow-xl transition-all duration-500",
-                            (dbUser?.role === 'dealer' || dbUser?.role === 'super dealer')
+                            dbUser?.role === 'dealer'
                                 ? "bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-700 shadow-[0_0_40px_rgba(139,92,246,0.2)]"
-                                : dbUser?.role === 'platinum'
-                                ? "bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-700 shadow-[0_0_40px_rgba(6,182,212,0.2)]"
                                 : "bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 shadow-[0_0_40px_rgba(245,158,11,0.2)]"
                         )}>
                             <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-20 mix-blend-overlay"></div>
