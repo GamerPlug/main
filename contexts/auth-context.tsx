@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter()
 
     const isAdmin = dbUser?.role === 'admin'
-    const isSubAdmin = dbUser?.role === 'sub-admin'
+    const isSubAdmin = false
 
     const fetchDbUser = useCallback(async (userId: string, retries = 3) => {
         let attempt = 0
