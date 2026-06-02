@@ -55,7 +55,7 @@ export function DashboardHeader() {
     }
 
     // Get role config
-    const userRole = isAdmin ? 'admin' : isSubAdmin ? 'sub-admin' : (dbUser?.role || 'user') as keyof typeof roleConfig
+    const userRole = isAdmin ? 'admin' : (dbUser?.role || 'agent') as keyof typeof roleConfig
     const currentRole = roleConfig[userRole] || roleConfig['agent']
     const RoleIcon = currentRole.icon
 
@@ -169,7 +169,7 @@ export function DashboardHeader() {
                                             borderColor: `${currentRole.color}40`
                                         }}
                                     >
-                                        {isAdmin ? 'Admin' : isSubAdmin ? 'Sub-Admin' : dbUser?.role === 'agent' ? 'Agent' : 'User'}
+                                        {isAdmin ? 'Admin' : dbUser?.role === 'dealer' ? 'Dealer' : 'Agent'}
                                     </Badge>
                                 </div>
                             </DropdownMenuLabel>
