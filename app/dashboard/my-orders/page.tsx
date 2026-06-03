@@ -318,8 +318,8 @@ export default function MyOrdersPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight drop-shadow-sm dark:drop-shadow-md">My Orders</h1>
-                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">Track and manage your recent transactions</p>
+                    <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">My Orders</h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Track and manage your recent transactions</p>
                 </div>
 
                 {/* Help Button */}
@@ -332,22 +332,22 @@ export default function MyOrdersPage() {
             <div className="grid grid-cols-3 gap-3 sm:gap-4 relative z-10">
                 <div className="glass-card rounded-2xl p-4 sm:p-5 text-center flex flex-col items-center justify-center relative overflow-hidden group border-slate-200 dark:border-white/5 shadow-sm dark:shadow-xl bg-white/50 dark:bg-black/40">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 dark:bg-blue-500/20 rounded-full blur-2xl group-hover:bg-blue-500/10 dark:group-hover:bg-blue-500/30 transition-colors"></div>
-                    <p className="text-slate-900 dark:text-white text-2xl sm:text-3xl font-black tracking-tight leading-none drop-shadow-sm dark:drop-shadow-md mb-1">{stats.totalOrders}</p>
-                    <p className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest relative z-10">Total Orders</p>
+                    <p className="text-slate-900 dark:text-white text-xl sm:text-2xl font-semibold tracking-tight leading-none mb-1">{stats.totalOrders}</p>
+                    <p className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest relative z-10">Total Orders</p>
                 </div>
 
                 <div className="glass-card rounded-2xl p-4 sm:p-5 text-center flex flex-col items-center justify-center relative overflow-hidden group border-yellow-500/30 bg-yellow-50 dark:bg-yellow-500/5 shadow-sm dark:shadow-[0_0_20px_rgba(234,179,8,0.15)]">
                     <div className="absolute top-0 left-0 w-32 h-32 bg-yellow-500/5 dark:bg-yellow-500/10 rounded-full blur-3xl group-hover:bg-yellow-500/10 dark:group-hover:bg-yellow-500/20 transition-colors"></div>
-                    <p className="text-yellow-600 dark:text-yellow-400 text-2xl sm:text-3xl font-black tracking-tight leading-none drop-shadow-sm dark:drop-shadow-[0_0_8px_rgba(250,204,21,0.5)] mb-1">
+                    <p className="text-yellow-600 dark:text-yellow-400 text-xl sm:text-2xl font-semibold tracking-tight leading-none mb-1">
                         {formatAmount(stats.totalAmount)}
                     </p>
-                    <p className="text-[10px] sm:text-xs font-bold text-yellow-600/70 dark:text-yellow-500/70 uppercase tracking-widest relative z-10">Total Amount</p>
+                    <p className="text-[10px] sm:text-xs font-medium text-yellow-600/70 dark:text-yellow-500/70 uppercase tracking-widest relative z-10">Total Amount</p>
                 </div>
 
                 <div className="glass-card rounded-2xl p-4 sm:p-5 text-center flex flex-col items-center justify-center relative overflow-hidden group border-slate-200 dark:border-white/5 shadow-sm dark:shadow-xl bg-white/50 dark:bg-black/40">
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-cyan-500/5 dark:bg-cyan-500/20 rounded-full blur-2xl group-hover:bg-cyan-500/10 dark:group-hover:bg-cyan-500/30 transition-colors"></div>
-                    <p className="text-slate-900 dark:text-white text-2xl sm:text-3xl font-black tracking-tight leading-none drop-shadow-sm dark:drop-shadow-md mb-1">{stats.totalData} <span className="text-sm sm:text-base text-slate-500 dark:text-slate-400">GB</span></p>
-                    <p className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest relative z-10">Total Data</p>
+                    <p className="text-slate-900 dark:text-white text-xl sm:text-2xl font-semibold tracking-tight leading-none mb-1">{stats.totalData} <span className="text-sm text-slate-500 dark:text-slate-400">GB</span></p>
+                    <p className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest relative z-10">Total Data</p>
                 </div>
             </div>
 
@@ -465,22 +465,22 @@ export default function MyOrdersPage() {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2 mb-1">
-                                                <p className="font-black text-slate-900 dark:text-white text-lg leading-none tracking-tight">{getProductName(order)}</p>
+                                                <p className="font-semibold text-slate-900 dark:text-white text-base leading-none">{getProductName(order)}</p>
                                                 <span className={cn("px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border", statusClass)}>
                                                     {order.status}
                                                 </span>
                                             </div>
-                                            <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{order.phone_number}</p>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400">{order.phone_number}</p>
                                         </div>
                                     </div>
 
                                     {/* Right: Price & Time & Actions */}
                                     <div className="flex flex-col sm:items-end gap-3 sm:gap-1 mt-2 sm:mt-0 border-t border-slate-100 dark:border-white/10 sm:border-0 pt-3 sm:pt-0">
-                                        <p className="font-black text-xl text-slate-900 dark:text-white tracking-tight leading-none text-left sm:text-right">
+                                        <p className="font-semibold text-base text-slate-900 dark:text-white leading-none text-left sm:text-right">
                                             {formatCurrency(order.price)}
                                         </p>
                                         <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-1">
-                                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{formatOrderDate(order.created_at)}</span>
+                                            <span className="text-[11px] text-slate-500 dark:text-slate-400">{formatOrderDate(order.created_at)}</span>
 
                                             {/* Action Area */}
                                             {order.complaints && order.complaints.length > 0 ? (
