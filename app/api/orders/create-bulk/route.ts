@@ -261,7 +261,6 @@ export async function POST(request: NextRequest) {
             phone_number: vo.order.phoneNumber,
             network: (vo.pkg as any).network,
             size: (vo.pkg as any).size,
-            bundle_name: (vo.pkg as any).size,
             price: vo.price,
             amount: vo.price,
             cost_price: (vo.pkg as any).cost_price || 0,
