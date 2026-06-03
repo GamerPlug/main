@@ -51,12 +51,26 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'No orders provided' }, { status: 400 })
         }
 
-        if (orders.length > 5000) {
-            return NextResponse.json({ error: 'Maximum 5,000 orders per batch' }, { status: 400 })
+        if (orders.length > 500) {
+            return NextResponse.json({ error: 'Maximum 500 orders per batch' }, { status: 400 })
         }
 
         // Service role client for privileged operations
         const supabase = createServerClient()
+
+        // DB-based rate limit: max 500 orders per 2 minutes per user
+        const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+        const { count: recentCount } = await supabase
+            .from('orders')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .gte('created_at', twoMinutesAgo)
+
+        if ((recentCount || 0) >= 500) {
+            return NextResponse.json({
+                error: 'Rate limit: too many orders placed recently. Please wait a moment before submitting again.',
+            }, { status: 429 })
+        }
 
         const { data: userData } = await supabase
             .from('users')
