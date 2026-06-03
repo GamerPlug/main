@@ -108,10 +108,7 @@ export async function PUT(request: NextRequest) {
 
     const { data, error } = await (supabaseAdmin
         .from('data_packages') as any)
-        .update({
-            ...updates,
-            updated_at: new Date().toISOString()
-        })
+        .update(updates)
         .eq('id', id)
         .select()
         .single()
