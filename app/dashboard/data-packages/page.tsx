@@ -4,12 +4,17 @@ import { useEffect, useState, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import { useAuth } from '@/contexts/auth-context'
 import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
 import { formatCurrency, cn } from '@/lib/utils'
 import { validateGhanaianPhone, detectNetwork } from '@/lib/phone-validation'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Check, Loader2, X, Upload, FileSpreadsheet, FileText, Download } from 'lucide-react'
+import { Check, Loader2, X, Upload, FileSpreadsheet, FileText, Download, Tag } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { DataPackage } from '@/types/supabase'
 
@@ -86,6 +91,9 @@ export default function DataPackagesPage() {
     const [creditLimit, setCreditLimit] = useState(0)
     const [unlimitedCredit, setUnlimitedCredit] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
+
+    const [isSuggestOpen, setIsSuggestOpen] = useState(false)
+    const [suggestNetwork, setSuggestNetwork] = useState<NetworkGroupId>('MTN')
 
     const [inputMode, setInputMode] = useState<InputMode>('text')
     const [bulkText, setBulkText] = useState('')
@@ -367,11 +375,15 @@ export default function DataPackagesPage() {
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-foreground">Data Bundles</h1>
                 <div className="flex items-center gap-2">
-                    <Link href="/dashboard/my-orders">
-                        <Button variant="outline" size="sm" className="rounded-xl text-sm font-semibold border-border">
-                            My bundles
-                        </Button>
-                    </Link>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsSuggestOpen(true)}
+                        className="rounded-xl text-sm font-semibold border-border gap-1.5"
+                    >
+                        <Tag className="w-3.5 h-3.5" />
+                        View Prices
+                    </Button>
                     <Button size="sm" className="rounded-xl text-sm font-semibold bg-foreground text-background hover:bg-foreground/90 border-0">
                         Place new
                     </Button>
@@ -640,5 +652,81 @@ export default function DataPackagesPage() {
             </div>
 
         </div>
+
+        {/* Suggest / Package price list modal */}
+        <Dialog open={isSuggestOpen} onOpenChange={setIsSuggestOpen}>
+            <DialogContent className="max-w-sm w-[calc(100vw-2rem)] rounded-2xl p-0 overflow-hidden gap-0">
+                <DialogHeader className="px-5 pt-5 pb-3 border-b border-border">
+                    <DialogTitle className="text-base font-semibold text-foreground">Package Prices</DialogTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                        Viewing as{' '}
+                        <span className="font-semibold text-foreground capitalize">{dbUser?.role || 'agent'}</span>
+                    </p>
+                </DialogHeader>
+
+                {/* Network tabs */}
+                <div className="px-4 pt-4 pb-2 flex gap-2 flex-wrap">
+                    {NETWORK_GROUPS.map(group => {
+                        const isActive = suggestNetwork === group.id
+                        return (
+                            <button
+                                key={group.id}
+                                onClick={() => setSuggestNetwork(group.id)}
+                                className={cn(
+                                    'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border',
+                                    isActive
+                                        ? 'border-transparent text-white shadow-sm'
+                                        : 'border-border bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted'
+                                )}
+                                style={isActive ? { background: group.iconBg } : {}}
+                            >
+                                <span
+                                    className="w-4 h-4 rounded-md flex items-center justify-center text-[8px] font-black shrink-0"
+                                    style={isActive
+                                        ? { background: 'rgba(255,255,255,0.22)', color: '#fff' }
+                                        : { background: group.iconBg, color: group.iconText }}
+                                >
+                                    {group.abbr.charAt(0)}
+                                </span>
+                                {group.label}
+                            </button>
+                        )
+                    })}
+                </div>
+
+                {/* Package list */}
+                <div className="px-4 pb-5 pt-1 max-h-72 overflow-y-auto space-y-2">
+                    {(() => {
+                        const group = NETWORK_GROUPS.find(g => g.id === suggestNetwork)!
+                        const filtered = packages.filter(p => group.networks.includes(p.network))
+
+                        if (filtered.length === 0) {
+                            return (
+                                <div className="text-center py-10 text-muted-foreground text-sm">
+                                    No packages available for {group.label}
+                                </div>
+                            )
+                        }
+
+                        return filtered.map(pkg => (
+                            <div
+                                key={pkg.id}
+                                className="flex items-center justify-between px-4 py-3 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors"
+                            >
+                                <div>
+                                    <p className="text-sm font-semibold text-foreground">{pkg.size}</p>
+                                    {pkg.description && (
+                                        <p className="text-xs text-muted-foreground mt-0.5">{pkg.description}</p>
+                                    )}
+                                </div>
+                                <p className="text-sm font-semibold text-foreground shrink-0 ml-4">
+                                    {formatCurrency(getEffectivePrice(pkg))}
+                                </p>
+                            </div>
+                        ))
+                    })()}
+                </div>
+            </DialogContent>
+        </Dialog>
     )
 }
