@@ -299,20 +299,20 @@ export default function AdminPackagesPage() {
                                         <div className="flex items-start justify-between">
                                             <div className="space-y-1">
                                                 <CardTitle className="text-2xl font-bold">{pkg.size}</CardTitle>
-                                                <div className="flex flex-col gap-1">
-                                                    <p className="text-2xl font-bold text-primary">{formatCurrency(pkg.price)}</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {(pkg.dealer_price ?? 0) > 0 && (
-                                                            <Badge variant="outline" className="text-[10px] text-purple-600 border-purple-200 bg-purple-50">
-                                                                Dealer: {formatCurrency(pkg.dealer_price ?? 0)}
-                                                            </Badge>
-                                                        )}
-                                                        {(pkg.agent_price ?? 0) > 0 && (
-                                                            <Badge variant="outline" className="text-[10px] text-yellow-600 border-yellow-200 bg-yellow-50">
-                                                                Agent: {formatCurrency(pkg.agent_price ?? 0)}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
+                                                <div className="flex flex-wrap gap-1.5 mt-1">
+                                                    <Badge variant="outline" className="text-[10px] text-blue-600 border-blue-200 bg-blue-50">
+                                                        Admin: {formatCurrency(pkg.price)}
+                                                    </Badge>
+                                                    {(pkg.dealer_price ?? 0) > 0 && (
+                                                        <Badge variant="outline" className="text-[10px] text-purple-600 border-purple-200 bg-purple-50">
+                                                            Dealer: {formatCurrency(pkg.dealer_price ?? 0)}
+                                                        </Badge>
+                                                    )}
+                                                    {(pkg.agent_price ?? 0) > 0 && (
+                                                        <Badge variant="outline" className="text-[10px] text-yellow-600 border-yellow-200 bg-yellow-50">
+                                                            Agent: {formatCurrency(pkg.agent_price ?? 0)}
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                             </div>
                                             <Switch
@@ -398,36 +398,36 @@ export default function AdminPackagesPage() {
                                 />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="text-blue-600 font-bold">Standard Price (User)</Label>
-                                <Input
-                                    type="number"
-                                    value={formData.price}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-purple-600 font-bold">Dealer Price</Label>
-                                <Input
-                                    type="number"
-                                    value={formData.dealer_price}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, dealer_price: parseFloat(e.target.value) || 0 }))}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="text-yellow-600 font-bold">Agent Price</Label>
-                                <Input
-                                    type="number"
-                                    value={formData.agent_price}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, agent_price: parseFloat(e.target.value) || 0 }))}
-                                    placeholder="0.00"
-                                />
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pricing by Role</Label>
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label className="text-blue-600 font-bold">Admin Price</Label>
+                                    <Input
+                                        type="number"
+                                        value={formData.price}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-purple-600 font-bold">Dealer Price</Label>
+                                    <Input
+                                        type="number"
+                                        value={formData.dealer_price}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, dealer_price: parseFloat(e.target.value) || 0 }))}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-yellow-600 font-bold">Agent Price</Label>
+                                    <Input
+                                        type="number"
+                                        value={formData.agent_price}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, agent_price: parseFloat(e.target.value) || 0 }))}
+                                        placeholder="0.00"
+                                    />
+                                </div>
                             </div>
                         </div>
 
