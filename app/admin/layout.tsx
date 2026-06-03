@@ -66,7 +66,7 @@ export default function AdminLayout({
         <UIProvider>
             <div className="min-h-screen bg-[#E5E7EB] dark:bg-[#000000]">
                 <DashboardSidebar />
-                <div className="lg:pl-72">
+                <div className="lg:pl-[260px]">
                     <DashboardHeader />
                     <main className="p-4 lg:p-6">
                         {children}

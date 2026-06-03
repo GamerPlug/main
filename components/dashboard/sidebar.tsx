@@ -57,6 +57,34 @@ const adminNavItems = [
     { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]
 
+// Defined outside the parent so React never unmounts/remounts it on re-renders.
+// Defining a component inside another component gives it a new reference each
+// render, which causes React to treat it as a different component — breaking
+// touch events and causing the double-press bug on mobile.
+interface NavItemProps {
+    href: string
+    label: string
+    icon: React.ElementType
+    isActive: boolean
+    onNavigate: () => void
+}
+
+function NavItem({ href, label, icon: Icon, isActive, onNavigate }: NavItemProps) {
+    return (
+        <Link href={href} onClick={onNavigate}>
+            <div className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+                isActive
+                    ? "bg-muted text-foreground border border-border font-semibold"
+                    : "text-foreground/70 hover:bg-muted hover:text-foreground font-normal"
+            )}>
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                {label}
+            </div>
+        </Link>
+    )
+}
+
 export function DashboardSidebar() {
     const pathname = usePathname()
     const { dbUser, isAdmin, signOut } = useAuth()
@@ -67,7 +95,7 @@ export function DashboardSidebar() {
         if (href === '/dashboard' || href === '/admin') {
             return pathname === href
         }
-        return pathname?.startsWith(href)
+        return pathname?.startsWith(href) ?? false
     }
 
     const resolvedRole = (isAdmin ? 'admin' : (dbUser?.role ?? 'agent')) as keyof typeof roleConfig
@@ -76,26 +104,6 @@ export function DashboardSidebar() {
     const initials = dbUser
         ? `${dbUser.first_name?.[0] ?? ''}${dbUser.last_name?.[0] ?? ''}`.toUpperCase()
         : ''
-
-    const NavItem = ({ href, label, icon: Icon }: { href: string; label: string; icon: React.ElementType }) => {
-        const isActive = isLinkActive(href)
-        return (
-            <Link
-                href={href}
-                onClick={() => { if (window.innerWidth < 1024) closeSidebar() }}
-            >
-                <div className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                    isActive
-                        ? "bg-muted text-foreground border border-border font-semibold"
-                        : "text-foreground/70 hover:bg-muted hover:text-foreground font-normal"
-                )}>
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    {label}
-                </div>
-            </Link>
-        )
-    }
 
     return (
         <>
@@ -152,7 +160,16 @@ export function DashboardSidebar() {
                         <div className="space-y-0.5">
                             {workspaceNavItems
                                 .filter(item => isAdmin || isPageAccessible(item.href))
-                                .map(item => <NavItem key={item.href} {...item} />)}
+                                .map(item => (
+                                    <NavItem
+                                        key={item.href}
+                                        href={item.href}
+                                        label={item.label}
+                                        icon={item.icon}
+                                        isActive={isLinkActive(item.href)}
+                                        onNavigate={closeSidebar}
+                                    />
+                                ))}
                         </div>
                     </div>
 
@@ -164,7 +181,16 @@ export function DashboardSidebar() {
                         <div className="space-y-0.5">
                             {quickNavItems
                                 .filter(item => isAdmin || isPageAccessible(item.href))
-                                .map(item => <NavItem key={item.href} {...item} />)}
+                                .map(item => (
+                                    <NavItem
+                                        key={item.href}
+                                        href={item.href}
+                                        label={item.label}
+                                        icon={item.icon}
+                                        isActive={isLinkActive(item.href)}
+                                        onNavigate={closeSidebar}
+                                    />
+                                ))}
                         </div>
                     </div>
 
@@ -175,7 +201,16 @@ export function DashboardSidebar() {
                                 Admin
                             </p>
                             <div className="space-y-0.5">
-                                {adminNavItems.map(item => <NavItem key={item.href} {...item} />)}
+                                {adminNavItems.map(item => (
+                                    <NavItem
+                                        key={item.href}
+                                        href={item.href}
+                                        label={item.label}
+                                        icon={item.icon}
+                                        isActive={isLinkActive(item.href)}
+                                        onNavigate={closeSidebar}
+                                    />
+                                ))}
                             </div>
                         </div>
                     )}
