@@ -60,18 +60,13 @@ export function DashboardHeader() {
     const RoleIcon = currentRole.icon
 
     return (
-        <header className={cn(
-            "sticky top-0 z-40 h-16 backdrop-blur-xl border-b transition-all duration-300",
-            dbUser?.role === 'agent'
-                ? "bg-yellow-50 dark:bg-card border-yellow-200/60 dark:border-border shadow-sm"
-                : "bg-white dark:bg-card border-border shadow-sm"
-        )}>
+        <header className="sticky top-0 z-40 h-16 bg-background border-b border-border shadow-sm">
             <div className="h-full px-4 lg:px-8 flex items-center justify-between">
                 {/* Mobile Menu Button */}
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="lg:hidden text-slate-500 dark:text-slate-300 hover:text-primary dark:hover:text-white hover:bg-primary/5 dark:hover:bg-white/10 transition-colors"
+                    className="lg:hidden text-foreground/70 hover:text-foreground hover:bg-muted transition-colors"
                     onClick={toggleSidebar}
                 >
                     <Menu className="w-5 h-5" />
@@ -79,11 +74,10 @@ export function DashboardHeader() {
 
                 {/* Welcome Message */}
                 <div className="hidden lg:block">
-                    <h1 className="text-lg font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-slate-700 to-slate-500 dark:from-white dark:to-white/60 drop-shadow-sm flex items-center gap-2">
+                    <h1 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
                         Welcome back, {dbUser?.first_name || 'User'}!
-                        <span className="text-xl animate-bounce origin-bottom inline-block">👋</span>
                     </h1>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                    <p className="text-xs font-medium text-foreground/60 mt-0.5">
                         Here's what's happening with your account
                     </p>
                 </div>
@@ -94,7 +88,7 @@ export function DashboardHeader() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white hover:bg-primary/5 dark:hover:bg-white/10 transition-colors h-10 w-10 rounded-full"
+                        className="text-foreground/60 hover:text-foreground hover:bg-muted transition-colors h-10 w-10 rounded-full"
                         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                     >
                         {mounted && (theme === 'dark' ? (
@@ -122,15 +116,12 @@ export function DashboardHeader() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="relative text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white hover:bg-primary/5 dark:hover:bg-white/10 transition-colors h-10 w-10 rounded-full"
+                            className="relative text-foreground/60 hover:text-foreground hover:bg-muted transition-colors h-10 w-10 rounded-full"
                         >
                             <Bell className="w-5 h-5" />
                             {unreadCount > 0 && (
                                 <span className={cn(
-                                    "absolute top-1.5 right-1.5 w-4 h-4 text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-950 shadow-md",
-                                    dbUser?.role === 'agent'
-                                        ? "bg-yellow-500 text-black animate-pulse"
-                                        : "bg-primary text-white animate-pulse"
+                                    "absolute top-1.5 right-1.5 w-4 h-4 text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-background shadow-md bg-primary text-primary-foreground animate-pulse"
                                 )}>
                                     {unreadCount > 9 ? '9+' : unreadCount}
                                 </span>
@@ -155,10 +146,10 @@ export function DashboardHeader() {
                         <DropdownMenuContent className="w-64 glass-card border-white/10 mt-2 p-2" align="end" forceMount>
                             <DropdownMenuLabel className="font-normal p-3">
                                 <div className="flex flex-col space-y-2">
-                                    <p className="text-sm font-bold text-slate-900 dark:text-white leading-none">
+                                    <p className="text-sm font-bold text-foreground leading-none">
                                         {dbUser?.first_name} {dbUser?.last_name}
                                     </p>
-                                    <p className="text-xs leading-none text-slate-400 font-medium">
+                                    <p className="text-xs leading-none text-foreground/60 font-medium">
                                         {dbUser?.email}
                                     </p>
                                     <Badge
@@ -175,14 +166,14 @@ export function DashboardHeader() {
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator className="bg-white/10 my-1" />
                             <Link href="/dashboard/profile">
-                                <DropdownMenuItem className="focus:bg-slate-100 dark:focus:bg-white/10 focus:text-slate-900 dark:focus:text-white text-slate-600 dark:text-slate-300 rounded-lg cursor-pointer py-2.5 transition-colors">
+                                <DropdownMenuItem className="focus:bg-muted focus:text-foreground text-foreground/70 rounded-lg cursor-pointer py-2.5 transition-colors">
                                     <User className="mr-3 h-4 w-4" />
                                     <span className="font-medium">Profile Details</span>
                                 </DropdownMenuItem>
                             </Link>
                             {isAdmin && (
                                 <Link href="/admin/settings">
-                                    <DropdownMenuItem className="focus:bg-slate-100 dark:focus:bg-white/10 focus:text-slate-900 dark:focus:text-white text-slate-600 dark:text-slate-300 rounded-lg cursor-pointer py-2.5 transition-colors mt-1">
+                                    <DropdownMenuItem className="focus:bg-muted focus:text-foreground text-foreground/70 rounded-lg cursor-pointer py-2.5 transition-colors mt-1">
                                         <Settings className="mr-3 h-4 w-4" />
                                         <span className="font-medium">Admin Settings</span>
                                     </DropdownMenuItem>
