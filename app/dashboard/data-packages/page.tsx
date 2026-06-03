@@ -369,6 +369,7 @@ export default function DataPackagesPage() {
     // ─── Render ────────────────────────────────────────────────────────────────
 
     return (
+        <>
         <div className="max-w-2xl mx-auto space-y-4">
 
             {/* Header */}
@@ -728,5 +729,6 @@ export default function DataPackagesPage() {
                 </div>
             </DialogContent>
         </Dialog>
+        </>
     )
 }
