@@ -145,7 +145,6 @@ export async function POST(request: NextRequest) {
                 phone_number: phoneNumber,
                 network: (pkg as any).network,
                 size: (pkg as any).size,
-                bundle_name: (pkg as any).size, // Compatibility
                 price: priceToCharge,
                 amount: priceToCharge, // Compatibility
                 cost_price: (pkg as any).cost_price || 0,
