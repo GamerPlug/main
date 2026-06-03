@@ -548,7 +548,7 @@ export default function DataPackagesPage() {
                                     <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-500 uppercase tracking-widest mb-1">
                                         {validCount} valid order{validCount !== 1 ? 's' : ''}
                                     </p>
-                                    <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
+                                    <p className="text-lg font-semibold text-emerald-700 dark:text-emerald-300">
                                         {formatCurrency(totalCost)}
                                     </p>
                                 </div>
@@ -557,7 +557,7 @@ export default function DataPackagesPage() {
                                         Balance after
                                     </p>
                                     <p className={cn(
-                                        'text-xl font-black',
+                                        'text-base font-semibold',
                                         balanceAfter < 0
                                             ? 'text-red-500'
                                             : 'text-emerald-700 dark:text-emerald-300'
