@@ -55,9 +55,9 @@ export default function DashboardLayout({
                         <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-[100px] opacity-30"></div>
                     </div>
                     <DashboardSidebar />
-                    <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 lg:pl-[300px] relative z-10 w-full overflow-hidden">
+                    <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 lg:pl-[300px] relative z-10 w-full overflow-x-hidden">
                         <DashboardHeader />
-                        <main className="p-4 lg:p-6 lg:py-8 max-w-7xl mx-auto w-full flex-1 overflow-x-hidden animate-fadeIn">
+                        <main className="p-4 lg:p-6 lg:py-8 max-w-7xl mx-auto w-full flex-1 animate-fadeIn">
                             <SuspendedAccount />
                         </main>
                     </div>
@@ -77,9 +77,9 @@ export default function DashboardLayout({
                         <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-[100px] opacity-30"></div>
                     </div>
                     <DashboardSidebar />
-                    <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 lg:pl-[300px] relative z-10 w-full overflow-hidden">
+                    <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 lg:pl-[300px] relative z-10 w-full overflow-x-hidden">
                         <DashboardHeader />
-                        <main className="p-4 lg:p-6 lg:py-8 max-w-7xl mx-auto w-full flex-1 overflow-x-hidden animate-fadeIn">
+                        <main className="p-4 lg:p-6 lg:py-8 max-w-7xl mx-auto w-full flex-1 animate-fadeIn">
                             {children}
                         </main>
                     </div>
@@ -100,9 +100,9 @@ export default function DashboardLayout({
                 </div>
                 <SystemAnnouncementModal />
                 <DashboardSidebar />
-                <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 lg:pl-[300px] relative z-10 w-full overflow-hidden">
+                <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 lg:pl-[300px] relative z-10 w-full overflow-x-hidden">
                     <DashboardHeader />
-                    <main className="p-4 lg:p-6 lg:py-8 max-w-7xl mx-auto w-full flex-1 overflow-x-hidden animate-fadeIn">
+                    <main className="p-4 lg:p-6 lg:py-8 max-w-7xl mx-auto w-full flex-1 animate-fadeIn">
                         {children}
                     </main>
                 </div>
