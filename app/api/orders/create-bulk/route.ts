@@ -3,8 +3,10 @@ import { createServerClient } from '@/lib/supabase'
 import { generateReferenceCode } from '@/lib/utils'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { sendOrderSuccessEmail, sendAdminNewOrderAlert } from '@/lib/email-service'
+import { sendAdminNewOrderAlert } from '@/lib/email-service'
 import { sendOrderSuccessSMS, sendAdminAgentOrderAlert } from '@/lib/sms-service'
+import { validateGhanaianPhone } from '@/lib/phone-validation'
+import { fulfillIShareOrderWithTracking } from '@/lib/ishare-fulfillment'
 
 interface BulkOrderItem {
     packageId: string
@@ -56,14 +58,13 @@ export async function POST(request: NextRequest) {
         // Service role client for privileged operations
         const supabase = createServerClient()
 
-        // Verify user is an agent
         const { data: userData } = await supabase
             .from('users')
             .select('role, email, first_name, last_name, phone_number, requires_settlement')
             .eq('id', userId)
             .single()
 
-        const userRole = (userData as any).role
+        const userRole = (userData as any)?.role
         const isSpecialRole = ['admin', 'dealer', 'agent'].includes(userRole)
 
         if (!userData || !isSpecialRole) {
@@ -71,21 +72,18 @@ export async function POST(request: NextRequest) {
         }
 
         if ((userData as any).requires_settlement) {
-            return NextResponse.json({ 
-                error: 'Account settlement required. Please contact admin to activate your account.' 
+            return NextResponse.json({
+                error: 'Account settlement required. Please contact admin to activate your account.'
             }, { status: 403 })
         }
 
-        const isAgent = userRole === 'agent'
         const userEmail = (userData as any).email
         const firstName = (userData as any).first_name || 'Agent'
         const lastName = (userData as any).last_name || ''
         const accountHolderPhone = (userData as any).phone_number
 
-
         // --- Phase 1: Validate all orders upfront ---
 
-        // Fetch all unique package IDs
         const uniquePackageIds = [...new Set(orders.map(o => o.packageId))]
         const { data: packagesData, error: pkgError } = await supabase
             .from('data_packages')
@@ -99,12 +97,20 @@ export async function POST(request: NextRequest) {
 
         const packageMap = new Map((packagesData || []).map(p => [(p as any).id, p]))
 
-        // Fetch all unique phone numbers for blacklist check
-        const uniquePhones = [...new Set(orders.map(o => o.phoneNumber))]
+        // Normalize and validate phones server-side, then batch-check blacklist
+        const normalizedPhones = new Map<string, string>() // raw → normalized
+        for (const order of orders) {
+            const phoneVal = validateGhanaianPhone(order.phoneNumber)
+            if (phoneVal.isValid) {
+                normalizedPhones.set(order.phoneNumber, phoneVal.normalizedNumber)
+            }
+        }
+
+        const uniqueNormalized = [...new Set(normalizedPhones.values())]
         const { data: blacklistedPhones } = await supabase
             .from('phone_blacklist')
             .select('phone_number')
-            .in('phone_number', uniquePhones)
+            .in('phone_number', uniqueNormalized)
 
         const blacklistSet = new Set((blacklistedPhones || []).map((b: any) => b.phone_number))
 
@@ -122,19 +128,17 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Validate each order and calculate total cost
         const validatedOrders: {
             order: BulkOrderItem
             pkg: any
             price: number
             referenceCode: string
-            existingOrder?: any
         }[] = []
         const results: OrderResult[] = []
         let totalCost = 0
 
         for (const order of orders) {
-            // Check if already processed (idempotency)
+            // Idempotency check
             const existing = existingOrderMap.get(order.idempotencyKey)
             if (existing) {
                 results.push({
@@ -147,10 +151,23 @@ export async function POST(request: NextRequest) {
                 continue
             }
 
+            // Server-side phone validation
+            const phoneVal = validateGhanaianPhone(order.phoneNumber)
+            if (!phoneVal.isValid) {
+                results.push({
+                    phoneNumber: order.phoneNumber,
+                    packageId: order.packageId,
+                    success: false,
+                    error: phoneVal.error || 'Invalid phone number',
+                })
+                continue
+            }
+            const normalizedPhone = phoneVal.normalizedNumber
+
             const pkg = packageMap.get(order.packageId)
             if (!pkg) {
                 results.push({
-                    phoneNumber: order.phoneNumber,
+                    phoneNumber: normalizedPhone,
                     packageId: order.packageId,
                     success: false,
                     error: 'Package not found or unavailable',
@@ -158,9 +175,9 @@ export async function POST(request: NextRequest) {
                 continue
             }
 
-            if (blacklistSet.has(order.phoneNumber)) {
+            if (blacklistSet.has(normalizedPhone)) {
                 results.push({
-                    phoneNumber: order.phoneNumber,
+                    phoneNumber: normalizedPhone,
                     packageId: order.packageId,
                     success: false,
                     error: 'Phone number is blacklisted',
@@ -168,17 +185,15 @@ export async function POST(request: NextRequest) {
                 continue
             }
 
-            const role = userRole
-            // Calculate effective price based on role
             let price = (pkg as any).price
-            if (role === 'dealer' && (pkg as any).dealer_price > 0) {
+            if (userRole === 'dealer' && (pkg as any).dealer_price > 0) {
                 price = (pkg as any).dealer_price
-            } else if (role === 'agent' && (pkg as any).agent_price > 0) {
+            } else if (userRole === 'agent' && (pkg as any).agent_price > 0) {
                 price = (pkg as any).agent_price
             }
-            const referenceCode = generateReferenceCode()
 
-            validatedOrders.push({ order, pkg, price, referenceCode })
+            const referenceCode = generateReferenceCode()
+            validatedOrders.push({ order: { ...order, phoneNumber: normalizedPhone }, pkg, price, referenceCode })
             totalCost += price
         }
 
@@ -186,7 +201,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({
                 success: true,
                 results,
-                summary: { total: orders.length, succeeded: results.filter(r => r.success).length, failed: results.filter(r => !r.success).length }
+                summary: {
+                    total: orders.length,
+                    succeeded: results.filter(r => r.success).length,
+                    failed: results.filter(r => !r.success).length,
+                }
             })
         }
 
@@ -198,7 +217,6 @@ export async function POST(request: NextRequest) {
 
         if (deductError || !(deductResult as any)?.success) {
             const errorMsg = (deductResult as any)?.error || deductError?.message || 'Wallet deduction failed'
-            // Mark all remaining orders as failed
             for (const vo of validatedOrders) {
                 results.push({
                     phoneNumber: vo.order.phoneNumber,
@@ -211,7 +229,11 @@ export async function POST(request: NextRequest) {
                 success: false,
                 error: errorMsg,
                 results,
-                summary: { total: orders.length, succeeded: results.filter(r => r.success).length, failed: results.filter(r => !r.success).length }
+                summary: {
+                    total: orders.length,
+                    succeeded: results.filter(r => r.success).length,
+                    failed: results.filter(r => !r.success).length,
+                }
             })
         }
 
@@ -244,13 +266,10 @@ export async function POST(request: NextRequest) {
 
         if (insertError || !insertedOrders) {
             console.error('Bulk order insert error:', insertError)
-
-            // Refund the full amount since no orders were created
             await supabase.rpc('refund_wallet', {
                 p_user_id: userId,
                 p_amount: totalCost,
             })
-
             for (const vo of validatedOrders) {
                 results.push({
                     phoneNumber: vo.order.phoneNumber,
@@ -259,16 +278,19 @@ export async function POST(request: NextRequest) {
                     error: 'Failed to create order',
                 })
             }
-
             return NextResponse.json({
                 success: false,
                 error: 'Failed to create orders. Wallet has been refunded.',
                 results,
-                summary: { total: orders.length, succeeded: results.filter(r => r.success).length, failed: results.filter(r => !r.success).length }
+                summary: {
+                    total: orders.length,
+                    succeeded: results.filter(r => r.success).length,
+                    failed: results.filter(r => !r.success).length,
+                }
             }, { status: 500 })
         }
 
-        // --- Phase 4: Create wallet transactions and notifications ---
+        // --- Phase 4: Wallet transactions, notifications, user_purchases ---
         const walletTransactions = validatedOrders.map(vo => ({
             wallet_id: walletId,
             user_id: userId,
@@ -279,10 +301,8 @@ export async function POST(request: NextRequest) {
             source: 'purchase',
             status: 'completed',
         }))
-
         await (supabase.from('wallet_transactions') as any).insert(walletTransactions)
 
-        // Create notifications for all orders  
         const notifications = validatedOrders.map(vo => ({
             user_id: userId,
             title: 'Order Placed',
@@ -290,18 +310,13 @@ export async function POST(request: NextRequest) {
             type: 'order_update',
             action_url: '/dashboard/my-orders',
         }))
-
         await (supabase.from('notifications') as any).insert(notifications)
 
-        // Update user_purchases for each unique phone number
+        // Update user_purchases per unique phone
         const phoneAmounts = new Map<string, number>()
         for (const vo of validatedOrders) {
-            phoneAmounts.set(
-                vo.order.phoneNumber,
-                (phoneAmounts.get(vo.order.phoneNumber) || 0) + vo.price
-            )
+            phoneAmounts.set(vo.order.phoneNumber, (phoneAmounts.get(vo.order.phoneNumber) || 0) + vo.price)
         }
-
         for (const [phone, amount] of phoneAmounts) {
             const purchaseCount = validatedOrders.filter(vo => vo.order.phoneNumber === phone).length
             const { data: existing } = await supabase
@@ -310,7 +325,6 @@ export async function POST(request: NextRequest) {
                 .eq('user_id', userId)
                 .eq('user_phone', phone)
                 .single()
-
             if (existing) {
                 await supabase
                     .from('user_purchases')
@@ -332,7 +346,6 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Add successful results
         for (let i = 0; i < validatedOrders.length; i++) {
             const vo = validatedOrders[i]
             const insertedOrder = insertedOrders[i]
@@ -345,17 +358,12 @@ export async function POST(request: NextRequest) {
             })
         }
 
-        // --- Phase 5: Trigger fulfillment and notifications (async, non-blocking) ---
-        // Send email/SMS notifications
+        // --- Phase 5: Notifications and fulfillment (async, non-blocking) ---
         try {
-            // Send single admin agent order alert for the batch
-            const isAgentOrDealer = ['agent', 'dealer'].includes(userRole)
-            if (isAgentOrDealer) {
+            if (['agent', 'dealer'].includes(userRole)) {
                 sendAdminAgentOrderAlert()
-                    .catch((err: Error) => console.error('[BulkOrder] Agent Admin SMS alert error:', err))
+                    .catch((err: Error) => console.error('[BulkOrder] Agent admin SMS alert error:', err))
             }
-
-            // Send admin email alert for the batch
             sendAdminNewOrderAlert({
                 referenceCode: `BULK-${validatedOrders.length}-orders`,
                 phoneNumber: `${validatedOrders.length} recipients`,
@@ -363,29 +371,34 @@ export async function POST(request: NextRequest) {
                 size: `${validatedOrders.length} packages`,
                 price: totalCost,
                 userName: `${firstName} ${lastName}`.trim(),
-                userEmail: userEmail
+                userEmail,
             }).catch((err: Error) => console.error('[BulkOrder] Admin email error:', err))
 
-            // Send SMS to agent
             if (accountHolderPhone) {
-                sendOrderSuccessSMS(
-                    accountHolderPhone,
-                    {
-                        network: 'Bulk',
-                        size: `${validatedOrders.length} orders`,
-                        price: totalCost,
-                        recipientNumber: `${validatedOrders.length} numbers`,
-                        currentBalance: newBalance
-                    }
-                ).catch((err: Error) => console.error('[BulkOrder] SMS error:', err))
+                sendOrderSuccessSMS(accountHolderPhone, {
+                    network: 'Bulk',
+                    size: `${validatedOrders.length} orders`,
+                    price: totalCost,
+                    recipientNumber: `${validatedOrders.length} numbers`,
+                    currentBalance: newBalance,
+                }).catch((err: Error) => console.error('[BulkOrder] SMS error:', err))
             }
         } catch (notifyError) {
             console.error('[BulkOrder] Notification error:', notifyError)
         }
 
-        // Trigger fulfillment for each order (async)
-        for (const insertedOrder of insertedOrders) {
-            triggerFulfillment((insertedOrder as any).id, (insertedOrder as any).network)
+        // Trigger auto-fulfillment for AT-iShare orders
+        for (let i = 0; i < insertedOrders.length; i++) {
+            const insertedOrder = insertedOrders[i]
+            const vo = validatedOrders[i]
+            triggerFulfillment(
+                (insertedOrder as any).id,
+                (insertedOrder as any).network,
+                vo.order.phoneNumber,
+                (vo.pkg as any).size,
+                vo.referenceCode,
+                userId
+            )
         }
 
         return NextResponse.json({
@@ -402,14 +415,30 @@ export async function POST(request: NextRequest) {
 
     } catch (error: any) {
         console.error('Bulk purchase error:', error)
-        return NextResponse.json({
-            error: 'Internal server error',
-            details: error.message,
-        }, { status: 500 })
+        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 })
     }
 }
 
-async function triggerFulfillment(orderId: string, network: string) {
-    console.log(`[BulkOrder] Triggering fulfillment for order ${orderId} on ${network}`)
-    // Fulfillment is handled by the cron job / webhook system
+async function triggerFulfillment(
+    orderId: string,
+    network: string,
+    phone: string,
+    size: string,
+    referenceCode: string,
+    userId: string
+) {
+    if (network === 'AT-iShare') {
+        const supabase = createServerClient()
+        const { data: setting } = await (supabase
+            .from('admin_settings') as any)
+            .select('value')
+            .eq('key', 'ishare_auto_fulfillment_enabled')
+            .single()
+
+        if (setting?.value === 'true') {
+            fulfillIShareOrderWithTracking(orderId, phone, size, referenceCode, userId)
+                .catch((err: Error) => console.error('[BulkOrder] iShare auto-fulfill error:', err))
+        }
+    }
+    // MTN and other networks rely on cron jobs
 }
