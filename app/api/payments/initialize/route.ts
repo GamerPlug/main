@@ -35,8 +35,12 @@ export async function POST(request: NextRequest) {
 
         const { amount } = await request.json()
 
-        if (!amount || amount < 5) {
+        if (typeof amount !== 'number' || isNaN(amount) || amount < 5) {
             return NextResponse.json({ error: 'Minimum amount is GHS 5' }, { status: 400 })
+        }
+
+        if (amount > 5000) {
+            return NextResponse.json({ error: 'Maximum top-up per transaction is GHS 5,000' }, { status: 400 })
         }
 
         // Get current user

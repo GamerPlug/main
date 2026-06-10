@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
                 return NextResponse.json({ success: false, error: result.error || 'Processing failed' }, { status: 500 })
             }
             return NextResponse.redirect(
-                `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/wallet?error=${result.error || 'processing_failed'}`
+                `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/wallet?error=${encodeURIComponent(result.error || 'processing_failed')}`
             )
         }
 
