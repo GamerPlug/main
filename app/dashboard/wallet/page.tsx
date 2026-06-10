@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -48,6 +48,8 @@ function WalletContent() {
     const [isLoading, setIsLoading] = useState(true)
     const [topUpAmount, setTopUpAmount] = useState('')
     const [isProcessing, setIsProcessing] = useState(false)
+    const [rateLimitCountdown, setRateLimitCountdown] = useState(0)
+    const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const [paystackFeePercent, setPaystackFeePercent] = useState(1.95)
     const [isWalletTopupEnabled, setIsWalletTopupEnabled] = useState(true)
     const searchParams = useSearchParams()
@@ -57,6 +59,11 @@ function WalletContent() {
 
     const isWalletAccessible = isAdmin || isPageAccessible('/dashboard/wallet')
     const isAgent = dbUser?.role === 'agent'
+
+    // Clear countdown interval on unmount
+    useEffect(() => {
+        return () => { if (countdownRef.current) clearInterval(countdownRef.current) }
+    }, [])
 
     useEffect(() => {
         if (!isWalletAccessible) {
@@ -205,6 +212,26 @@ function WalletContent() {
             })
 
             const data = await response.json()
+
+            if (response.status === 429) {
+                const retryAfter: number = data.retryAfter ?? 60
+                toast.error(data.error || 'Too many attempts. Please wait before retrying.')
+                setIsProcessing(false)
+                // Start visible countdown so user knows exactly when they can retry
+                setRateLimitCountdown(retryAfter)
+                if (countdownRef.current) clearInterval(countdownRef.current)
+                countdownRef.current = setInterval(() => {
+                    setRateLimitCountdown((prev) => {
+                        if (prev <= 1) {
+                            clearInterval(countdownRef.current!)
+                            countdownRef.current = null
+                            return 0
+                        }
+                        return prev - 1
+                    })
+                }, 1000)
+                return
+            }
 
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to initialize payment')
@@ -424,12 +451,17 @@ function WalletContent() {
                         <Button
                             type="submit"
                             className="w-full h-12 rounded-xl text-sm font-semibold gradient-primary text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 border-0"
-                            disabled={!isWalletTopupEnabled || isProcessing || !isAmountValid}
+                            disabled={!isWalletTopupEnabled || isProcessing || !isAmountValid || rateLimitCountdown > 0}
                         >
                             {isProcessing ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                     Processing...
+                                </>
+                            ) : rateLimitCountdown > 0 ? (
+                                <>
+                                    <AlertTriangle className="w-4 h-4 mr-2" />
+                                    Retry in {rateLimitCountdown}s
                                 </>
                             ) : !isWalletTopupEnabled ? (
                                 <>

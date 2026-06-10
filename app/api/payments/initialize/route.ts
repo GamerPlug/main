@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase-server'
 import { createServerClient } from '@/lib/supabase'
 import { calculatePaystackFee, generateReferenceCode } from '@/lib/utils'
-import { getPaymentRatelimit } from '@/lib/rate-limit'
+import { getPaymentRatelimit, resetRatelimitSingletons } from '@/lib/rate-limit'
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY!
 
@@ -54,19 +54,28 @@ export async function POST(request: NextRequest) {
 
         // Rate limit: 10 payment inits per user per minute
         try {
-            const { success, remaining } = await getPaymentRatelimit().limit(userId)
+            const { success, remaining, reset } = await getPaymentRatelimit().limit(userId)
             if (!success) {
+                const retryAfterSecs = Math.max(1, Math.ceil((reset - Date.now()) / 1000))
                 return NextResponse.json(
-                    { error: 'Too many requests. Please wait a moment before trying again.' },
+                    {
+                        error: `Too many attempts. Please wait ${retryAfterSecs} second${retryAfterSecs === 1 ? '' : 's'} before trying again.`,
+                        retryAfter: retryAfterSecs,
+                    },
                     {
                         status: 429,
-                        headers: { 'X-RateLimit-Remaining': String(remaining) },
+                        headers: {
+                            'Retry-After': String(retryAfterSecs),
+                            'X-RateLimit-Remaining': String(remaining),
+                        },
                     }
                 )
             }
-        } catch {
-            // If Redis is unavailable, log and continue — don't block the payment
-            console.error('[PaymentInit] Rate limit check failed — Redis unavailable')
+        } catch (err) {
+            // Redis unavailable — fail open so payments are never blocked by infra issues
+            console.error('[PaymentInit] Rate limit check failed, failing open:', err)
+            // Reset singleton so the next request gets a fresh Redis connection
+            resetRatelimitSingletons()
         }
 
         // Get user details
