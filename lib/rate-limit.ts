@@ -1,14 +1,13 @@
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 
-// Lazily initialised so missing env vars throw at call-time, not module load
 let _redis: Redis | null = null
 let _paymentRatelimit: Ratelimit | null = null
 
 function getRedis(): Redis {
     if (!_redis) {
         if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
-            throw new Error('Upstash Redis env vars are not set (KV_REST_API_URL, KV_REST_API_TOKEN)')
+            throw new Error('Upstash env vars not set (KV_REST_API_URL, KV_REST_API_TOKEN)')
         }
         _redis = new Redis({
             url: process.env.KV_REST_API_URL,
@@ -16,6 +15,12 @@ function getRedis(): Redis {
         })
     }
     return _redis
+}
+
+// Reset singletons so the next call gets a fresh connection after a failure
+export function resetRatelimitSingletons() {
+    _redis = null
+    _paymentRatelimit = null
 }
 
 // 10 payment init attempts per user per minute
