@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase-server'
 import { createServerClient } from '@/lib/supabase'
 import { calculatePaystackFee, generateReferenceCode } from '@/lib/utils'
+import { getPaymentRatelimit } from '@/lib/rate-limit'
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY!
 
@@ -50,6 +51,23 @@ export async function POST(request: NextRequest) {
         }
 
         const userId = session.user.id
+
+        // Rate limit: 10 payment inits per user per minute
+        try {
+            const { success, remaining } = await getPaymentRatelimit().limit(userId)
+            if (!success) {
+                return NextResponse.json(
+                    { error: 'Too many requests. Please wait a moment before trying again.' },
+                    {
+                        status: 429,
+                        headers: { 'X-RateLimit-Remaining': String(remaining) },
+                    }
+                )
+            }
+        } catch {
+            // If Redis is unavailable, log and continue — don't block the payment
+            console.error('[PaymentInit] Rate limit check failed — Redis unavailable')
+        }
 
         // Get user details
         const { data: user } = await supabaseAdmin
