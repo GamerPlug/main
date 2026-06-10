@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/auth-context'
 import { supabase } from '@/lib/supabase'
 import { formatCurrency, cn } from '@/lib/utils'
 import { NetworkIcon } from '@/components/network-icon'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -26,15 +25,20 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
+import Link from 'next/link'
 import {
     Phone,
     ShoppingCart,
     Loader2,
     MessageSquare,
-    Wifi
+    Package,
+    TrendingUp,
+    Database,
+    Hash,
+    Plus,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Order, DataPackage, Complaint } from '@/types/supabase'
+import { Order, Complaint } from '@/types/supabase'
 import { format, differenceInHours } from 'date-fns'
 import { useTutorial } from '@/hooks/useTutorial'
 import { HelpButton } from '@/components/tutorial/HelpButton'
@@ -45,13 +49,18 @@ interface OrderWithComplaints extends Order {
 
 const NETWORKS = ['All', 'MTN', 'Telecel', 'AT-iShare', 'AT-BigTime']
 const STATUSES = ['All', 'pending', 'processing', 'completed', 'failed']
-const TIME_PERIODS = ['Today', 'Yesterday', 'This Week', 'This Month', 'Custom']
+
+const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+    completed: { label: 'Completed', className: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' },
+    processing: { label: 'Processing', className: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20' },
+    failed: { label: 'Failed', className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' },
+    pending: { label: 'Pending', className: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' },
+}
 
 export default function MyOrdersPage() {
     const { dbUser, isLoading: isAuthLoading } = useAuth()
     const [orders, setOrders] = useState<OrderWithComplaints[]>([])
 
-    // Tutorial hook
     const userRole = dbUser?.role === 'agent' ? 'agent' : 'user'
     const { startTutorial } = useTutorial(userRole as 'user' | 'agent', '/orders')
     const [isLoading, setIsLoading] = useState(true)
@@ -63,83 +72,52 @@ export default function MyOrdersPage() {
     const [customEnd, setCustomEnd] = useState('')
     const [isCustomDialogOpen, setIsCustomDialogOpen] = useState(false)
 
-    // Complaint dialog
     const [complaintOrder, setComplaintOrder] = useState<Order | null>(null)
     const [complaintDescription, setComplaintDescription] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     useEffect(() => {
         if (!isAuthLoading) {
-            if (dbUser) {
-                fetchData()
-            } else {
-                setIsLoading(false)
-            }
+            if (dbUser) fetchData()
+            else setIsLoading(false)
         }
     }, [dbUser, isAuthLoading])
 
-    // Real-time subscription for live order updates
     useEffect(() => {
         if (!dbUser) return
-
         const channel = supabase
             .channel(`my-orders-${dbUser.id}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `user_id=eq.${dbUser.id}` }, () => {
                 fetchData()
             })
             .subscribe()
-
-        return () => {
-            supabase.removeChannel(channel)
-        }
+        return () => { supabase.removeChannel(channel) }
     }, [dbUser])
 
     const fetchData = async () => {
         try {
-            // Only fetch orders from the last 30 days for performance
             const thirtyDaysAgo = new Date()
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
             const { data, error } = await supabase
                 .from('orders')
                 .select('*, complaints(*)')
                 .eq('user_id', dbUser?.id as any)
                 .gte('created_at', thirtyDaysAgo.toISOString())
                 .order('created_at', { ascending: false })
-
             if (error) throw error
             setOrders(data || [])
-        } catch (error) {
-            console.error('Error fetching data:', error)
+        } catch {
             toast.error('Failed to load orders')
         } finally {
             setIsLoading(false)
         }
     }
 
-    // Check if order is within 48 hours for complaint eligibility
-    const isWithin48Hours = (createdAt: string) => {
-        const orderDate = new Date(createdAt)
-        const now = new Date()
-        return differenceInHours(now, orderDate) < 48
-    }
+    const isWithin48Hours = (createdAt: string) =>
+        differenceInHours(new Date(), new Date(createdAt)) < 48
 
-    // Get product name based on network for consistent display
-    const getProductName = (order: Order) => {
-        const networkNames: Record<string, string> = {
-            'MTN': 'MTN Data Bundle',
-            'Telecel': 'Telecel Data Bundle',
-            'AT-iShare': 'AT Premium Bundle',
-            'AT-BigTime': 'AT BigTime Bundle',
-        }
-        return networkNames[order.network] || `${order.network} Bundle`
-    }
-
-    // Filter orders based on all criteria
     const filteredOrders = useMemo(() => {
         let filtered = orders
-
-        // Time period filter
         const now = new Date()
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
         const yesterday = new Date(today)
@@ -151,71 +129,42 @@ export default function MyOrdersPage() {
         filtered = filtered.filter(order => {
             const orderDate = new Date(order.created_at)
             switch (timePeriod) {
-                case 'Today':
-                    return orderDate >= today
-                case 'Yesterday':
-                    return orderDate >= yesterday && orderDate < today
-                case 'This Week':
-                    return orderDate >= weekStart
-                case 'This Month':
-                    return orderDate >= monthStart
+                case 'Today': return orderDate >= today
+                case 'Yesterday': return orderDate >= yesterday && orderDate < today
+                case 'This Week': return orderDate >= weekStart
+                case 'This Month': return orderDate >= monthStart
                 case 'Custom':
                     if (!customStart || !customEnd) return true
                     const start = new Date(customStart)
                     const end = new Date(customEnd)
                     end.setHours(23, 59, 59, 999)
                     return orderDate >= start && orderDate <= end
-                default:
-                    return true
+                default: return true
             }
         })
 
-        // Network filter
-        if (networkFilter !== 'All') {
-            filtered = filtered.filter(o => o.network === networkFilter)
-        }
-
-        // Status filter
-        if (statusFilter !== 'All') {
-            filtered = filtered.filter(o => o.status === statusFilter)
-        }
-
-        // Phone search
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase()
-            filtered = filtered.filter(o =>
-                o.phone_number.includes(query)
-            )
-        }
+        if (networkFilter !== 'All') filtered = filtered.filter(o => o.network === networkFilter)
+        if (statusFilter !== 'All') filtered = filtered.filter(o => o.status === statusFilter)
+        if (searchQuery) filtered = filtered.filter(o => o.phone_number.includes(searchQuery.toLowerCase()))
 
         return filtered
-    }, [orders, searchQuery, networkFilter, statusFilter, timePeriod])
+    }, [orders, searchQuery, networkFilter, statusFilter, timePeriod, customStart, customEnd])
 
-    // Calculate stats from filtered orders
     const stats = useMemo(() => {
-        const paidOrders = filteredOrders.filter(o => o.payment_status !== 'refunded')
-        const totalAmount = paidOrders.reduce((sum, o) => sum + (o.price || 0), 0)
-
-        // Parse data sizes and sum them
+        const countableOrders = filteredOrders.filter(o => o.payment_status == null || o.payment_status !== 'refunded')
+        const totalAmount = countableOrders.reduce((sum, o) => sum + (o.price || 0), 0)
         let totalDataGB = 0
-        paidOrders.forEach(order => {
-            const sizeStr = order.size.toLowerCase()
-            const match = sizeStr.match(/([\d.]+)\s*(gb|mb)/i)
+        countableOrders.forEach(order => {
+            const match = order.size?.toLowerCase().match(/([\d.]+)\s*(gb|mb)/i)
             if (match) {
                 const value = parseFloat(match[1])
-                const unit = match[2].toLowerCase()
-                if (unit === 'gb') {
-                    totalDataGB += value
-                } else if (unit === 'mb') {
-                    totalDataGB += value / 1024
-                }
+                totalDataGB += match[2].toLowerCase() === 'gb' ? value : value / 1024
             }
         })
-
         return {
             totalOrders: filteredOrders.length,
             totalAmount,
-            totalData: totalDataGB.toFixed(totalDataGB >= 1 ? 0 : 2)
+            totalData: totalDataGB >= 1 ? totalDataGB.toFixed(0) : totalDataGB.toFixed(2),
         }
     }, [filteredOrders])
 
@@ -226,7 +175,6 @@ export default function MyOrdersPage() {
 
     const submitComplaint = async () => {
         if (!complaintOrder || !complaintDescription) return
-
         setIsSubmitting(true)
         try {
             const response = await fetch('/api/complaints/submit', {
@@ -237,131 +185,122 @@ export default function MyOrdersPage() {
                     title: `Issue with order ${complaintOrder.reference_code}`,
                     description: complaintDescription,
                     priority: 'medium',
-                })
+                }),
             })
-
             if (!response.ok) {
                 const errorData = await response.json()
                 throw new Error(errorData.error || 'Failed to submit complaint')
             }
-
-            const { complaint: newComplaintFromServer } = await response.json() // Get actual data from server if needed
-
             toast.success('Complaint submitted successfully')
-            // Refresh logic - optimistically add complaint to state
-            const newComplaint = {
-                id: 'temp-' + Date.now(),
-                order_id: complaintOrder.id,
-                status: 'pending' as const,
-                title: `Issue with order ${complaintOrder.reference_code}`,
-                description: complaintDescription,
-                created_at: new Date().toISOString(),
-                user_id: dbUser?.id,
-                updated_at: new Date().toISOString()
-            }
-            setOrders(orders.map(o => o.id === complaintOrder.id ? { ...o, complaints: [newComplaint as any] } : o))
+            setOrders(prev => prev.map(o => o.id === complaintOrder.id ? {
+                ...o,
+                complaints: [{
+                    id: 'temp-' + Date.now(),
+                    order_id: complaintOrder.id,
+                    status: 'pending' as const,
+                    title: `Issue with order ${complaintOrder.reference_code}`,
+                    description: complaintDescription,
+                    created_at: new Date().toISOString(),
+                    user_id: dbUser?.id,
+                    updated_at: new Date().toISOString(),
+                } as any],
+            } : o))
             setComplaintOrder(null)
-        } catch (error) {
+        } catch {
             toast.error('Failed to submit complaint')
         } finally {
             setIsSubmitting(false)
         }
     }
 
-    const getStatusBadgeClass = (status: string) => {
-        switch (status) {
-            case 'completed':
-                return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-            case 'processing':
-                return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-            case 'failed':
-                return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-            default:
-                return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-        }
-    }
-
-    // const getNetworkIcon = (network: string) => { ... } // Removed
-
-    const formatOrderDate = (dateStr: string) => {
-        return format(new Date(dateStr), 'MMM dd, yyyy HH:mm')
-    }
-
-    // Format amount for display (no truncation)
-    const formatAmount = (amount: number) => {
-        return `₵${amount.toFixed(2)}`
-    }
-
     if (isLoading) {
         return (
-            <div className="space-y-6 px-4 py-6">
-                <div className="text-center space-y-2">
-                    <Skeleton className="h-8 w-48 mx-auto" />
-                    <Skeleton className="h-4 w-64 mx-auto" />
+            <div className="space-y-6">
+                <Skeleton className="h-10 w-48" />
+                <div className="grid grid-cols-3 gap-4">
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                    {[...Array(3)].map((_, i) => (
-                        <Skeleton key={i} className="h-20" />
-                    ))}
-                </div>
-                <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => (
-                        <Skeleton key={i} className="h-48" />
-                    ))}
+                <Skeleton className="h-12 w-full rounded-xl" />
+                <div className="space-y-3">
+                    {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}
                 </div>
             </div>
         )
     }
 
     return (
-        <div className="space-y-8 pb-8 relative z-10">
+        <div className="space-y-6 pb-8">
+
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">My Orders</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Track and manage your recent transactions</p>
+                    <h1 className="text-2xl font-bold text-foreground">My Orders</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">Track and manage your data bundle orders</p>
                 </div>
-
-                {/* Help Button */}
-                <div>
+                <div className="flex items-center gap-2">
                     <HelpButton onClick={startTutorial} />
+                    <Link href="/dashboard/data-packages">
+                        <Button size="sm" className="h-9 px-4 font-semibold gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
+                            <Plus className="w-4 h-4" />
+                            New Order
+                        </Button>
+                    </Link>
                 </div>
             </div>
 
-            {/* Summary Stats - Glowing Glass Cards */}
-            <div className="grid grid-cols-3 gap-3 sm:gap-4 relative z-10">
-                <div className="glass-card rounded-2xl p-4 sm:p-5 text-center flex flex-col items-center justify-center relative overflow-hidden group border-slate-200 dark:border-white/5 shadow-sm dark:shadow-xl bg-white/50 dark:bg-black/40">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 dark:bg-blue-500/20 rounded-full blur-2xl group-hover:bg-blue-500/10 dark:group-hover:bg-blue-500/30 transition-colors"></div>
-                    <p className="text-slate-900 dark:text-white text-xl sm:text-2xl font-semibold tracking-tight leading-none mb-1">{stats.totalOrders}</p>
-                    <p className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest relative z-10">Total Orders</p>
+            {/* Summary Stats */}
+            <div className="grid grid-cols-3 gap-4">
+                <div className="bg-white dark:bg-card border border-border rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-start justify-between mb-3">
+                        <p className="text-xs font-medium text-muted-foreground">Total Orders</p>
+                        <div className="w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center">
+                            <Package className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                        </div>
+                    </div>
+                    <p className="text-2xl font-bold text-foreground tracking-tight">{stats.totalOrders}</p>
+                    <p className="text-xs text-muted-foreground mt-1">in period</p>
                 </div>
 
-                <div className="glass-card rounded-2xl p-4 sm:p-5 text-center flex flex-col items-center justify-center relative overflow-hidden group border-yellow-500/30 bg-yellow-50 dark:bg-yellow-500/5 shadow-sm dark:shadow-[0_0_20px_rgba(234,179,8,0.15)]">
-                    <div className="absolute top-0 left-0 w-32 h-32 bg-yellow-500/5 dark:bg-yellow-500/10 rounded-full blur-3xl group-hover:bg-yellow-500/10 dark:group-hover:bg-yellow-500/20 transition-colors"></div>
-                    <p className="text-yellow-600 dark:text-yellow-400 text-xl sm:text-2xl font-semibold tracking-tight leading-none mb-1">
-                        {formatAmount(stats.totalAmount)}
+                <div className="bg-white dark:bg-card border border-border rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-start justify-between mb-3">
+                        <p className="text-xs font-medium text-muted-foreground">Amount Spent</p>
+                        <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-500/10 flex items-center justify-center">
+                            <TrendingUp className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                        </div>
+                    </div>
+                    <p className="text-xl font-bold text-foreground tracking-tight">
+                        <span className="text-xs font-semibold text-muted-foreground mr-0.5">GHS</span>
+                        {stats.totalAmount.toFixed(2)}
                     </p>
-                    <p className="text-[10px] sm:text-xs font-medium text-yellow-600/70 dark:text-yellow-500/70 uppercase tracking-widest relative z-10">Total Amount</p>
+                    <p className="text-xs text-muted-foreground mt-1">excluding refunds</p>
                 </div>
 
-                <div className="glass-card rounded-2xl p-4 sm:p-5 text-center flex flex-col items-center justify-center relative overflow-hidden group border-slate-200 dark:border-white/5 shadow-sm dark:shadow-xl bg-white/50 dark:bg-black/40">
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-cyan-500/5 dark:bg-cyan-500/20 rounded-full blur-2xl group-hover:bg-cyan-500/10 dark:group-hover:bg-cyan-500/30 transition-colors"></div>
-                    <p className="text-slate-900 dark:text-white text-xl sm:text-2xl font-semibold tracking-tight leading-none mb-1">{stats.totalData} <span className="text-sm text-slate-500 dark:text-slate-400">GB</span></p>
-                    <p className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest relative z-10">Total Data</p>
+                <div className="bg-white dark:bg-card border border-border rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-start justify-between mb-3">
+                        <p className="text-xs font-medium text-muted-foreground">Data Bought</p>
+                        <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center">
+                            <Database className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                        </div>
+                    </div>
+                    <p className="text-2xl font-bold text-foreground tracking-tight">
+                        {stats.totalData}
+                        <span className="text-sm font-semibold text-muted-foreground ml-1">GB</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">total delivered</p>
                 </div>
             </div>
 
-            {/* Time Period Filters */}
-            <div className="flex flex-wrap items-center gap-2 relative z-10 w-full bg-white/50 dark:bg-black/40 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-2xl p-1.5 shadow-sm dark:shadow-xl">
-                {['Today', 'Yesterday', 'This Week', 'This Month'].map((period) => (
+            {/* Time Period Tabs */}
+            <div className="bg-white dark:bg-card border border-border rounded-xl p-1 flex gap-1 shadow-sm">
+                {['Today', 'Yesterday', 'This Week', 'This Month'].map(period => (
                     <button
                         key={period}
                         onClick={() => setTimePeriod(period)}
                         className={cn(
-                            "flex-1 px-2 py-2 text-[10px] sm:text-xs font-bold rounded-xl transition-all duration-300",
+                            'flex-1 px-2 py-2 text-xs font-semibold rounded-lg transition-all',
                             timePeriod === period
-                                ? "bg-gradient-to-r from-primary to-cyan-500 text-white shadow-lg scale-[1.02]"
-                                : "bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
+                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                         )}
                     >
                         {period}
@@ -370,141 +309,137 @@ export default function MyOrdersPage() {
                 <button
                     onClick={() => setIsCustomDialogOpen(true)}
                     className={cn(
-                        "flex-1 px-2 py-2 text-[10px] sm:text-xs font-bold rounded-xl transition-all duration-300",
+                        'flex-1 px-2 py-2 text-xs font-semibold rounded-lg transition-all',
                         timePeriod === 'Custom'
-                            ? "bg-gradient-to-r from-primary to-cyan-500 text-white shadow-lg scale-[1.02]"
-                            : "bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     )}
                 >
                     {timePeriod === 'Custom' && customStart && customEnd
-                        ? `${new Date(customStart).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}-${new Date(customEnd).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}`
-                        : 'Custom Range'}
+                        ? `${new Date(customStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${new Date(customEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+                        : 'Custom'}
                 </button>
             </div>
 
             {/* Filters */}
-            <div id="order-filters" className="space-y-4">
-                {/* Search by Phone */}
-                <div className="space-y-2 relative z-10">
-                    <Label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Search by Phone</Label>
-                    <div className="relative">
-                        <div className="absolute inset-0 bg-primary/5 rounded-2xl blur-xl transition-colors pointer-events-none"></div>
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 z-10" />
-                        <Input
-                            placeholder="Enter phone number"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-11 h-14 bg-white/50 dark:bg-black/40 backdrop-blur-xl border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-2xl focus-visible:ring-primary/50 text-base shadow-sm dark:shadow-lg relative z-10"
-                        />
-                    </div>
+            <div id="order-filters" className="space-y-3">
+                <div className="relative">
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search by phone number"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 h-10 rounded-xl bg-background border-border"
+                    />
                 </div>
-
-                {/* Filter Dropdowns */}
-                <div className="grid grid-cols-2 gap-4 relative z-10">
-                    <div className="space-y-2">
-                        <Label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Status</Label>
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-full h-12 bg-white/50 dark:bg-black/40 backdrop-blur-xl border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:ring-primary/50 font-bold">
-                                <SelectValue placeholder="All Statuses" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-slate-950 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white">
-                                {STATUSES.map((status) => (
-                                    <SelectItem key={status} value={status} className="focus:bg-slate-100 dark:focus:bg-white/10 focus:text-slate-900 dark:focus:text-white font-bold cursor-pointer">
-                                        {status === 'All' ? 'All Statuses' : status.charAt(0).toUpperCase() + status.slice(1)}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Network</Label>
-                        <Select value={networkFilter} onValueChange={setNetworkFilter}>
-                            <SelectTrigger className="w-full h-12 bg-white/50 dark:bg-black/40 backdrop-blur-xl border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:ring-primary/50 font-bold">
-                                <SelectValue placeholder="All Networks" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-slate-950 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white">
-                                {NETWORKS.map((network) => (
-                                    <SelectItem key={network} value={network} className="focus:bg-slate-100 dark:focus:bg-white/10 focus:text-slate-900 dark:focus:text-white font-bold cursor-pointer">
-                                        {network === 'All' ? 'All Networks' : network}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                <div className="grid grid-cols-2 gap-3">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="h-10 rounded-xl bg-background border-border font-medium">
+                            <SelectValue placeholder="All Statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {STATUSES.map(status => (
+                                <SelectItem key={status} value={status}>
+                                    {status === 'All' ? 'All Statuses' : status.charAt(0).toUpperCase() + status.slice(1)}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={networkFilter} onValueChange={setNetworkFilter}>
+                        <SelectTrigger className="h-10 rounded-xl bg-background border-border font-medium">
+                            <SelectValue placeholder="All Networks" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {NETWORKS.map(network => (
+                                <SelectItem key={network} value={network}>
+                                    {network === 'All' ? 'All Networks' : network}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
 
-            {/* Order Cards */}
-            <div id="orders-table" className="space-y-4 mt-6">
+            {/* Order List */}
+            <div id="orders-table" className="space-y-3">
                 {filteredOrders.length === 0 ? (
-                    <div className="glass-card rounded-[2rem] py-16 text-center border-slate-200 dark:border-white/5 flex flex-col items-center justify-center bg-white/50 dark:bg-black/40 shadow-sm dark:shadow-xl">
-                        <div className="w-20 h-20 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center mb-4">
-                            <ShoppingCart className="w-10 h-10 text-slate-400 dark:text-slate-500/50" />
+                    <div className="bg-white dark:bg-card border border-border rounded-2xl py-16 flex flex-col items-center justify-center text-center shadow-sm">
+                        <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                            <ShoppingCart className="w-7 h-7 text-muted-foreground" />
                         </div>
-                        <p className="text-slate-500 dark:text-slate-400 font-bold">No orders found</p>
+                        <p className="text-sm font-semibold text-foreground mb-1">No orders found</p>
+                        <p className="text-xs text-muted-foreground mb-4">Try adjusting your filters or date range.</p>
+                        <Link href="/dashboard/data-packages">
+                            <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+                                Place an order
+                            </Button>
+                        </Link>
                     </div>
                 ) : (
                     filteredOrders.map((order) => {
-                        const statusColors: any = {
-                            completed: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-sm dark:shadow-[0_0_15px_rgba(16,185,129,0.15)]',
-                            processing: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shadow-sm dark:shadow-[0_0_15px_rgba(6,182,212,0.15)]',
-                            failed: 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 shadow-sm dark:shadow-[0_0_15px_rgba(225,29,72,0.15)]',
-                            pending: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-sm dark:shadow-[0_0_15px_rgba(245,158,11,0.15)]'
-                        }
-
-                        const statusClass = statusColors[order.status] || statusColors.pending;
+                        const statusCfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending
+                        const hasComplaint = order.complaints && order.complaints.length > 0
+                        const canComplain = order.status === 'completed' && isWithin48Hours(order.created_at) && !hasComplaint
 
                         return (
-                            <div key={order.id} className="glass-card rounded-2xl overflow-hidden border border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 shadow-sm hover:shadow-xl transition-all group z-10 relative bg-white/50 dark:bg-black/40 backdrop-blur-md">
-                                <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-
-                                    {/* Left: Icon & Details */}
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 shadow-inner">
-                                            <NetworkIcon network={order.network} size={40} />
+                            <div
+                                key={order.id}
+                                className="bg-white dark:bg-card border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow"
+                            >
+                                <div className="flex items-center justify-between gap-4">
+                                    {/* Left: Network icon + details */}
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                                            <NetworkIcon network={order.network} size={28} />
                                         </div>
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <p className="font-semibold text-slate-900 dark:text-white text-base leading-none">{getProductName(order)}</p>
-                                                <span className={cn("px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border", statusClass)}>
-                                                    {order.status}
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <p className="font-semibold text-foreground text-sm">{order.network}</p>
+                                                <span className="text-sm font-bold text-foreground">{order.size}</span>
+                                                <span className={cn(
+                                                    'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border',
+                                                    statusCfg.className
+                                                )}>
+                                                    {statusCfg.label}
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-slate-500 dark:text-slate-400">{order.phone_number}</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5 truncate">{order.phone_number}</p>
                                         </div>
                                     </div>
 
-                                    {/* Right: Price & Time & Actions */}
-                                    <div className="flex flex-col sm:items-end gap-3 sm:gap-1 mt-2 sm:mt-0 border-t border-slate-100 dark:border-white/10 sm:border-0 pt-3 sm:pt-0">
-                                        <p className="font-semibold text-base text-slate-900 dark:text-white leading-none text-left sm:text-right">
-                                            {formatCurrency(order.price)}
+                                    {/* Right: price + actions */}
+                                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                                        <p className="font-bold text-foreground text-sm">{formatCurrency(order.price)}</p>
+                                        <p className="text-[11px] text-muted-foreground">
+                                            {format(new Date(order.created_at), 'MMM d, HH:mm')}
                                         </p>
-                                        <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-1">
-                                            <span className="text-[11px] text-slate-500 dark:text-slate-400">{formatOrderDate(order.created_at)}</span>
-
-                                            {/* Action Area */}
-                                            {order.complaints && order.complaints.length > 0 ? (
-                                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300">
-                                                    <MessageSquare className="w-3 h-3" />
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest">
-                                                        {order.complaints[0].status.replace('_', ' ')}
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                order.status === 'completed' && isWithin48Hours(order.created_at) && (
-                                                    <Button
-                                                        id="complaint-button"
-                                                        size="sm"
-                                                        onClick={() => handleComplaint(order)}
-                                                        className="h-7 px-3 text-[10px] font-bold uppercase tracking-widest bg-rose-500/20 hover:bg-rose-500 border border-rose-500/50 text-rose-300 hover:text-white transition-all rounded-md"
-                                                    >
-                                                        <MessageSquare className="w-3 h-3 mr-1" />
-                                                        Complain
-                                                    </Button>
-                                                )
-                                            )}
-                                        </div>
                                     </div>
+                                </div>
+
+                                {/* Footer row: reference code + action */}
+                                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                                        <Hash className="w-3 h-3" />
+                                        <span className="font-mono">{order.reference_code || order.id.slice(0, 8)}</span>
+                                    </div>
+
+                                    {hasComplaint ? (
+                                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border bg-muted/50 border-border text-muted-foreground">
+                                            <MessageSquare className="w-3 h-3" />
+                                            {order.complaints![0].status.replace('_', ' ')}
+                                        </div>
+                                    ) : canComplain ? (
+                                        <Button
+                                            id="complaint-button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleComplaint(order)}
+                                            className="h-7 px-3 text-[10px] font-semibold uppercase tracking-wide border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground rounded-full transition-colors"
+                                        >
+                                            <MessageSquare className="w-3 h-3 mr-1" />
+                                            Report Issue
+                                        </Button>
+                                    ) : null}
                                 </div>
                             </div>
                         )
@@ -514,66 +449,72 @@ export default function MyOrdersPage() {
 
             {/* Complaint Dialog */}
             <Dialog open={!!complaintOrder} onOpenChange={() => setComplaintOrder(null)}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-md rounded-2xl">
                     <DialogHeader>
-                        <DialogTitle>File a Complaint</DialogTitle>
+                        <DialogTitle>Report an Issue</DialogTitle>
                         <DialogDescription>
-                            Describe the issue with your order
+                            Describe the problem with your order. Our team will review within 24 hours.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="p-4 rounded-xl bg-muted/50 text-sm">
+                    <div className="space-y-4 py-2">
+                        <div className="rounded-xl bg-muted/50 border border-border p-4 text-sm space-y-2">
                             <div className="flex justify-between">
-                                <span>Phone:</span>
-                                <span>{complaintOrder?.phone_number}</span>
+                                <span className="text-muted-foreground">Phone</span>
+                                <span className="font-medium text-foreground">{complaintOrder?.phone_number}</span>
                             </div>
-                            <div className="flex justify-between mt-1">
-                                <span>Package:</span>
-                                <span>{complaintOrder?.size}</span>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Package</span>
+                                <span className="font-medium text-foreground">{complaintOrder?.network} · {complaintOrder?.size}</span>
                             </div>
-                            <div className="flex justify-between mt-1">
-                                <span>Amount:</span>
-                                <span>{formatCurrency(complaintOrder?.price || 0)}</span>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Amount</span>
+                                <span className="font-medium text-foreground">{formatCurrency(complaintOrder?.price || 0)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Reference</span>
+                                <span className="font-mono text-xs text-foreground">{complaintOrder?.reference_code}</span>
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Label>Description</Label>
+                            <Label htmlFor="complaint-desc">Description</Label>
                             <Textarea
-                                placeholder="Describe your issue..."
+                                id="complaint-desc"
+                                placeholder="Describe your issue in detail..."
                                 value={complaintDescription}
                                 onChange={(e) => setComplaintDescription(e.target.value)}
                                 rows={4}
+                                className="rounded-xl resize-none"
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setComplaintOrder(null)}>
+                        <Button variant="outline" onClick={() => setComplaintOrder(null)} className="rounded-xl">
                             Cancel
                         </Button>
-                        <Button onClick={submitComplaint} disabled={isSubmitting || !complaintDescription}>
+                        <Button
+                            onClick={submitComplaint}
+                            disabled={isSubmitting || !complaintDescription.trim()}
+                            className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
+                        >
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                     Submitting...
                                 </>
-                            ) : (
-                                'Submit Complaint'
-                            )}
+                            ) : 'Submit Report'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {/* Custom Date Filter Dialog */}
+            {/* Custom Date Range Dialog */}
             <Dialog open={isCustomDialogOpen} onOpenChange={setIsCustomDialogOpen}>
-                <DialogContent className="sm:max-w-sm rounded-[24px]">
+                <DialogContent className="sm:max-w-sm rounded-2xl">
                     <DialogHeader>
-                        <DialogTitle>Select Date Range</DialogTitle>
-                        <DialogDescription>
-                            Filter your order history by date.
-                        </DialogDescription>
+                        <DialogTitle>Custom Date Range</DialogTitle>
+                        <DialogDescription>Filter your orders by a specific date range.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-4 py-2">
                         <div className="grid gap-2">
                             <Label htmlFor="u-start">Start Date</Label>
                             <Input
@@ -596,23 +537,25 @@ export default function MyOrdersPage() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCustomDialogOpen(false)} className="rounded-xl">Cancel</Button>
+                        <Button variant="outline" onClick={() => setIsCustomDialogOpen(false)} className="rounded-xl">
+                            Cancel
+                        </Button>
                         <Button
                             onClick={() => {
                                 if (customStart && customEnd) {
                                     setTimePeriod('Custom')
                                     setIsCustomDialogOpen(false)
                                 } else {
-                                    toast.error('Please select both dates')
+                                    toast.error('Please select both start and end dates')
                                 }
                             }}
-                            className="rounded-xl bg-[#1a1a1a] text-white hover:bg-black dark:bg-[#FACC15] dark:text-black dark:hover:bg-yellow-500"
+                            className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
                         >
-                            Apply Filter
+                            Apply
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div >
+        </div>
     )
 }
