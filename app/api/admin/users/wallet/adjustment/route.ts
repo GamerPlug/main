@@ -32,8 +32,6 @@ export async function POST(request: NextRequest) {
         const body = await request.json()
         const { userId, amount, type, description } = body
 
-        console.log('[Debug] Request:', { userId, amount, type })
-
         if (!userId || amount === undefined || !type) {
             return NextResponse.json({ error: 'userId, amount, and type are required' }, { status: 400 })
         }
@@ -41,6 +39,10 @@ export async function POST(request: NextRequest) {
         const adjustmentAmount = parseFloat(amount)
         if (isNaN(adjustmentAmount) || adjustmentAmount <= 0) {
             return NextResponse.json({ error: 'Invalid amount' }, { status: 400 })
+        }
+
+        if (adjustmentAmount > 50000) {
+            return NextResponse.json({ error: 'Adjustment amount exceeds maximum allowed (GHS 50,000)' }, { status: 400 })
         }
 
         // Service role client to bypass RLS
@@ -153,28 +155,16 @@ export async function POST(request: NextRequest) {
             is_read: false
         })
 
-        let debugInfo = {
-            userFound: false,
-            phoneFound: null as string | null,
-            smsAttempted: false,
-            smsResult: null as any
-        }
-
         if (type === 'credit') {
-            // 5. Fetch user data for notification (WITH DB DEBUG LOGS)
-            const { data: user, error: userFetchError } = await supabase
+            const { data: user } = await supabase
                 .from('users')
                 .select('email, first_name, phone_number')
                 .eq('id', userId)
                 .single()
 
-            console.log('[Debug] User Fetch Result:', { user, error: userFetchError })
-
             if (user) {
-                debugInfo.userFound = true
                 const reference = `MNL-${Date.now()}`
 
-                // Email
                 await sendWalletTopupSuccessEmail(
                     (user as any).email,
                     (user as any).first_name || 'User',
@@ -183,37 +173,22 @@ export async function POST(request: NextRequest) {
                     newBalance
                 )
 
-                // SMS
                 if ((user as any).phone_number) {
-                    debugInfo.phoneFound = (user as any).phone_number
-                    debugInfo.smsAttempted = true
-                    console.log('[Debug] Sending SMS to:', (user as any).phone_number)
                     try {
-                        const smsResult = await sendWalletTopupSuccessSMS(
+                        await sendWalletTopupSuccessSMS(
                             (user as any).phone_number,
-                            {
-                                amount: adjustmentAmount,
-                                newBalance
-                            }
+                            { amount: adjustmentAmount, newBalance }
                         )
-                        console.log('[Debug] SMS Result:', smsResult)
-                        debugInfo.smsResult = smsResult
                     } catch (smsError: any) {
-                        console.error('[Debug] SMS Failed:', smsError)
-                        debugInfo.smsResult = { error: smsError.message }
+                        console.error('[AdminWalletAdjustment] SMS failed:', smsError.message)
                     }
-                } else {
-                    console.warn('[Debug] Phone number missing for user. User Object:', user)
                 }
-            } else {
-                console.error('[Debug] User data could not be fetched for ID:', userId)
             }
         }
 
         return NextResponse.json({
             success: true,
             newBalance,
-            debug: debugInfo
         })
 
     } catch (error: any) {
