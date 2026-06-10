@@ -6,13 +6,11 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { formatCurrency, formatDate, calculatePaystackFee, cn } from '@/lib/utils'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
 import {
     Wallet,
     Plus,
@@ -25,9 +23,8 @@ import {
     TrendingUp,
     TrendingDown,
     AlertTriangle,
-    MessageSquare,
-    MessageCircle,
-    Send
+    Info,
+    ChevronRight,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { WalletTransaction } from '@/types/supabase'
@@ -55,14 +52,12 @@ function WalletContent() {
     const [isWalletTopupEnabled, setIsWalletTopupEnabled] = useState(true)
     const searchParams = useSearchParams()
 
-    // Tutorial hook
     const userRole = dbUser?.role === 'agent' ? 'agent' : 'user'
     const { startTutorial } = useTutorial(userRole as 'user' | 'agent', '/wallet')
 
-    // Check if wallet page is accessible
     const isWalletAccessible = isAdmin || isPageAccessible('/dashboard/wallet')
+    const isAgent = dbUser?.role === 'agent'
 
-    // Block access if page is disabled for non-admin users
     useEffect(() => {
         if (!isWalletAccessible) {
             toast.error('Wallet is temporarily unavailable')
@@ -80,7 +75,6 @@ function WalletContent() {
         }
     }, [dbUser, isAuthLoading])
 
-    // Real-time subscriptions for live wallet updates
     useEffect(() => {
         if (!dbUser) return
 
@@ -106,16 +100,13 @@ function WalletContent() {
         if (success === 'true') {
             toast.success('Wallet topped up successfully!')
             fetchWalletData()
-            // Clean up URL
             router.replace('/dashboard/wallet')
         } else if (error) {
             let message = 'Failed to process payment'
             if (error === 'payment_failed') message = 'Payment was not successful'
             if (error === 'verification_failed') message = 'Could not verify payment'
             if (error === 'no_reference') message = 'Invalid payment reference'
-
             toast.error(message)
-            // Clean up URL
             router.replace('/dashboard/wallet')
         }
     }, [searchParams, router])
@@ -123,15 +114,13 @@ function WalletContent() {
     const fetchWalletData = async () => {
         try {
             const [walletRes, txnsRes, feeSettingRes] = await Promise.all([
-                // Fetch wallet
                 supabase
                     .from('wallets')
                     .select('*')
                     .eq('user_id', dbUser?.id as any)
                     .single(),
 
-                // Fetch top-up transactions
-                dbUser?.role === 'agent'
+                isAgent
                     ? supabase
                         .from('wallet_transactions')
                         .select('*')
@@ -149,7 +138,6 @@ function WalletContent() {
                         .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
                         .order('created_at', { ascending: false }),
 
-                // Fetch settings
                 supabase
                     .from('admin_settings')
                     .select('key, value')
@@ -209,7 +197,6 @@ function WalletContent() {
         setIsProcessing(true)
 
         try {
-            // Initialize payment on server
             const response = await fetch('/api/payments/initialize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -223,7 +210,6 @@ function WalletContent() {
                 throw new Error(data.error || 'Failed to initialize payment')
             }
 
-            // Redirect to Paystack checkout
             window.location.href = data.authorization_url
         } catch (error: any) {
             toast.error(error.message || 'Failed to process payment')
@@ -231,328 +217,304 @@ function WalletContent() {
         }
     }
 
-    const fee = topUpAmount ? calculatePaystackFee(parseFloat(topUpAmount) || 0, paystackFeePercent) : 0
-    const totalAmount = topUpAmount ? (parseFloat(topUpAmount) || 0) + fee : 0
+    const parsedAmount = parseFloat(topUpAmount) || 0
+    const fee = topUpAmount ? calculatePaystackFee(parsedAmount, paystackFeePercent) : 0
+    const totalAmount = topUpAmount ? parsedAmount + fee : 0
+    const isAmountValid = topUpAmount !== '' && parsedAmount >= MIN_AMOUNT
 
     if (isLoading) {
         return (
             <div className="space-y-6">
-                <Skeleton className="h-48 w-full max-w-md" />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {[...Array(3)].map((_, i) => (
-                        <Skeleton key={i} className="h-24" />
-                    ))}
+                <div className="space-y-1.5">
+                    <Skeleton className="h-7 w-36" />
+                    <Skeleton className="h-4 w-56" />
                 </div>
+                <Skeleton className="h-44 w-full rounded-2xl" />
+                <Skeleton className="h-96 w-full rounded-2xl" />
             </div>
         )
     }
 
     return (
-        <div className="space-y-8 relative z-10 pb-8">
+        <div className="space-y-6 pb-8">
+
+            {/* Page Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight drop-shadow-sm dark:drop-shadow-md">Load Wallet</h1>
-                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">Top up your wallet to continue shopping</p>
+                    <h1 className="text-2xl font-bold text-foreground tracking-tight">My Wallet</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">Manage your balance and top up funds</p>
                 </div>
                 <HelpButton onClick={startTutorial} />
             </div>
 
-            {/* Balance Card at top for Agents */}
-            {dbUser?.role === 'agent' && (
-                <div className="w-full">
-                    <div id="wallet-balance-card" className="glass-card rounded-[2rem] p-6 relative overflow-hidden group border-slate-200 dark:border-white/5 shadow-sm dark:shadow-[0_0_30px_rgba(234,179,8,0.1)] bg-yellow-50/30 dark:bg-yellow-500/10">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/5 dark:bg-yellow-500/10 rounded-full blur-3xl group-hover:bg-yellow-500/10 dark:group-hover:bg-yellow-500/20 transition-colors pointer-events-none"></div>
-                        <div className="relative z-10">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-yellow-500/10 dark:bg-yellow-500/20 shadow-inner">
-                                        <Wallet className="w-6 h-6 text-yellow-600 dark:text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.3)] dark:drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]" />
-                                    </div>
-                                    <span className="font-bold uppercase tracking-widest text-sm text-yellow-600 dark:text-yellow-500">Wallet Balance</span>
-                                </div>
-                                <Badge className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 dark:border-emerald-500/30 px-3 py-1 text-[10px] uppercase tracking-widest shadow-sm">Active</Badge>
-                            </div>
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
-                                <div>
-                                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Available Balance</p>
-                                    <p className="text-5xl sm:text-6xl font-black text-slate-900 dark:text-white tracking-tighter drop-shadow-sm dark:drop-shadow-md">
-                                        <span className="text-2xl text-slate-400 dark:text-slate-300 mr-1">GH₵</span>
-                                        {unlimitedCredit ? 'Unlimited' : walletBalance.toFixed(2)}
-                                    </p>
-                                    {unlimitedCredit ? (
-                                        <div className="mt-2 flex items-center gap-2">
-                                            <Badge className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border-0">
-                                                Unlimited Credit (Free Range)
-                                            </Badge>
-                                        </div>
-                                    ) : creditLimit > 0 && (
-                                        <div className="mt-2 flex items-center gap-2">
-                                            <Badge variant="outline" className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5">
-                                                Credit Limit: {formatCurrency(creditLimit)}
-                                            </Badge>
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                                Total Buying Power: {formatCurrency(walletBalance + creditLimit)}
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex gap-6 w-full sm:w-auto pt-4 sm:pt-0 border-t border-slate-200 dark:border-white/10 sm:border-0">
-                                    <div className="bg-white/40 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 flex-1 sm:flex-none min-w-[120px]">
-                                        <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">
-                                            <TrendingUp className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
-                                            <span>Credited</span>
-                                        </div>
-                                        <p className="font-black text-slate-900 dark:text-white text-xl">{formatCurrency(totalCredited)}</p>
-                                    </div>
-                                    <div className="bg-white/40 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 flex-1 sm:flex-none min-w-[120px]">
-                                        <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">
-                                            <TrendingDown className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
-                                            <span>Spent</span>
-                                        </div>
-                                        <p className="font-black text-slate-900 dark:text-white text-xl">{formatCurrency(totalDebited)}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            {/* Maintenance Banner — only rendered when top-ups are disabled */}
+            {!isWalletTopupEnabled && (
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">Wallet Top-ups Temporarily Unavailable</p>
+                        <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                            Online top-ups are under maintenance. Please try again later or contact support.
+                        </p>
                     </div>
                 </div>
             )}
 
-
-            {/* Maintenance Banner - Show when wallet or top-ups are disabled */}
-            {((!isAdmin && !isPageAccessible('/dashboard/wallet')) || !isWalletTopupEnabled) && (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-400 dark:border-yellow-600 rounded-xl p-4">
-                    <div className="flex items-start gap-3">
-                        <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                            <h3 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-1">
-                                {!isWalletTopupEnabled ? 'Wallet Top-ups Temporarily Unavailable' : 'Wallet Temporarily Unavailable'}
-                            </h3>
-                            <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                                {!isWalletTopupEnabled 
-                                    ? 'Online wallet top-ups are currently undergoing maintenance. Please try again later or use manual top-up instructions below (for Agents).'
-                                    : 'The wallet feature is temporarily unavailable. Please contact support if you need assistance.'}
-                            </p>
-                            <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
-                                💡 You can still browse packages and check your orders.
-                            </p>
+            {/* Balance Card */}
+            <div id="wallet-balance-card" className="glass-card rounded-2xl p-6 border border-border">
+                <div className="flex items-start justify-between mb-5">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10 border border-primary/10">
+                            <Wallet className="w-5 h-5 text-primary" />
                         </div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Wallet Balance</p>
                     </div>
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className={dbUser?.role === 'agent' ? 'lg:col-span-3' : 'lg:col-span-1'}>
-                    <div className={cn("glass-card rounded-[2rem] p-6 relative overflow-hidden group border-slate-200 dark:border-white/5 shadow-sm dark:shadow-[0_0_30px_rgba(6,182,212,0.1)] h-full", dbUser?.role === 'agent' && "hidden")}>
-                        <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/5 dark:bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-500/10 dark:group-hover:bg-cyan-500/20 transition-colors pointer-events-none"></div>
-                        <div className="relative z-10 flex flex-col h-full">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/20 shadow-inner">
-                                        <Wallet className="w-6 h-6 text-cyan-600 dark:text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.3)] dark:drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
-                                    </div>
-                                    <span className="font-bold uppercase tracking-widest text-sm text-cyan-600 dark:text-cyan-400">Your Wallet</span>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 mb-8">
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Available Balance</p>
-                                <p className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter drop-shadow-sm dark:drop-shadow-md">
-                                    <span className="text-xl text-slate-400 dark:text-slate-300 mr-1">GH₵</span>
-                                    {walletBalance.toFixed(2)}
-                                </p>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4 mt-auto">
-                                <div className="bg-white/40 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4">
-                                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">
-                                        <TrendingUp className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />
-                                        <span>Credited</span>
-                                    </div>
-                                    <p className="font-black text-slate-900 dark:text-white text-lg">{formatCurrency(totalCredited)}</p>
-                                </div>
-                                <div className="bg-white/40 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4">
-                                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">
-                                        <TrendingDown className="w-3 h-3 text-rose-500 dark:text-rose-400" />
-                                        <span>Spent</span>
-                                    </div>
-                                    <p className="font-black text-slate-900 dark:text-white text-lg">{formatCurrency(totalDebited)}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <Badge className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 font-medium text-[11px] px-2.5">
+                        Active
+                    </Badge>
                 </div>
 
-                {/* Top Up Card */}
-                <div id="top-up-form" className={dbUser?.role === 'agent' ? 'lg:col-span-3' : 'lg:col-span-2'}>
-                    <div className="glass-card rounded-[2rem] border border-slate-200 dark:border-white/5 relative overflow-hidden group shadow-sm dark:shadow-xl">
-                        <div className="p-6 border-b border-slate-100 dark:border-white/5 flex flex-col">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 rounded-xl bg-primary/10 dark:bg-primary/20 shadow-inner">
-                                    <Plus className="w-6 h-6 text-primary drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
-                                </div>
-                                <div>
-                                    <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight drop-shadow-sm dark:drop-shadow-md">Top Up Wallet</h2>
-                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">Add funds using mobile money, card, or bank transfer.</p>
-                                </div>
-                            </div>
-                            {dbUser?.role === 'agent' && (
-                                <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest mt-4 bg-rose-500/10 px-3 py-1.5 rounded-lg inline-block w-fit border border-rose-500/20 shadow-sm ml-14">Paystack Charges Applied</span>
+                <div className="mb-5">
+                    <p className="text-4xl font-bold text-foreground tracking-tight">
+                        <span className="text-lg font-semibold text-muted-foreground mr-1.5">GH₵</span>
+                        {unlimitedCredit ? 'Unlimited' : walletBalance.toFixed(2)}
+                    </p>
+
+                    {isAgent && (
+                        <div className="flex flex-wrap gap-2 mt-3">
+                            {unlimitedCredit ? (
+                                <Badge className="bg-primary/10 text-primary border border-primary/20 text-[11px] font-medium px-2.5 py-0.5">
+                                    Unlimited Credit — Free Range
+                                </Badge>
+                            ) : creditLimit > 0 && (
+                                <>
+                                    <Badge variant="outline" className="text-[11px] font-medium px-2.5 py-0.5">
+                                        Credit Limit: {formatCurrency(creditLimit)}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-[11px] font-medium px-2.5 py-0.5 text-muted-foreground">
+                                        Total Buying Power: {formatCurrency(walletBalance + creditLimit)}
+                                    </Badge>
+                                </>
                             )}
                         </div>
-                        <form onSubmit={(e) => { e.preventDefault(); handleTopUp(); }}>
-                            <div className="p-6 space-y-8">
-                                {/* Quick Amounts */}
-                                <div className="space-y-3">
-                                    <Label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Quick Select</Label>
-                                    <div className="grid grid-cols-4 gap-3">
-                                        {QUICK_AMOUNTS.map((amount) => (
-                                            <Button
-                                                key={amount}
-                                                type="button"
-                                                onClick={() => handleQuickAmount(amount)}
-                                                className={cn(
-                                                    "h-14 rounded-xl text-sm font-black transition-all duration-300 border border-slate-200 dark:border-white/10 border-b-2 hover:-translate-y-1 shadow-sm dark:shadow-md",
-                                                    topUpAmount === amount.toString()
-                                                        ? "gradient-primary text-white scale-[1.02] border-white/20 shadow-xl"
-                                                        : "bg-slate-50 dark:bg-black/40 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-black/60 hover:border-slate-300 dark:hover:border-white/20"
-                                                )}
-                                            >
-                                                {formatCurrency(amount)}
-                                            </Button>
-                                        ))}
-                                    </div>
-                                </div>
+                    )}
+                </div>
 
-                                {/* Custom Amount */}
-                                <div className="space-y-3">
-                                    <Label htmlFor="amount" className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Custom Amount</Label>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 font-bold">GHS</span>
-                                        <Input
-                                            id="amount"
-                                            type="number"
-                                            placeholder="Enter amount"
-                                            value={topUpAmount}
-                                            onChange={(e) => setTopUpAmount(e.target.value)}
-                                            className="pl-14 h-16 text-2xl font-black bg-slate-50 dark:bg-black/40 backdrop-blur-xl border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-2xl focus-visible:ring-primary/50 shadow-inner"
-                                            min={MIN_AMOUNT}
-                                        />
-                                    </div>
-                                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest pl-1">Minimum: {formatCurrency(MIN_AMOUNT)}</p>
-                                </div>
-
-                                {/* Summary */}
-                                {topUpAmount && parseFloat(topUpAmount) >= MIN_AMOUNT && (
-                                    <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 space-y-3 backdrop-blur-md shadow-inner">
-                                        <div className="flex justify-between text-sm font-bold text-slate-600 dark:text-slate-300">
-                                            <span>Top-up amount</span>
-                                            <span>{formatCurrency(parseFloat(topUpAmount))}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm font-bold text-slate-500 dark:text-slate-400">
-                                            <span>Transaction fee ({paystackFeePercent}%)</span>
-                                            <span>{formatCurrency(fee)}</span>
-                                        </div>
-                                        <div className="h-px w-full bg-slate-200 dark:bg-white/10 my-2"></div>
-                                        <div className="flex justify-between items-center text-slate-900 dark:text-white">
-                                            <span className="font-bold uppercase tracking-widest text-xs">Total to pay</span>
-                                            <span className="text-xl font-black text-primary drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">{formatCurrency(totalAmount)}</span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Payment Methods */}
-                                <div className="space-y-3">
-                                    <Label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1 block">Payment Methods</Label>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        <div className="p-4 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-black/40 text-center flex flex-col items-center justify-center backdrop-blur-sm">
-                                            <Smartphone className="w-6 h-6 mb-2 text-yellow-600 dark:text-yellow-400 drop-shadow-sm" />
-                                            <span className="text-[10px] sm:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Mobile Money</span>
-                                        </div>
-                                        <div className="p-4 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-black/40 text-center flex flex-col items-center justify-center backdrop-blur-sm">
-                                            <CreditCard className="w-6 h-6 mb-2 text-blue-600 dark:text-blue-400 drop-shadow-sm" />
-                                            <span className="text-[10px] sm:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Card</span>
-                                        </div>
-                                        <div className="p-4 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-black/40 text-center flex flex-col items-center justify-center backdrop-blur-sm">
-                                            <Building className="w-6 h-6 mb-2 text-purple-600 dark:text-purple-400 drop-shadow-sm" />
-                                            <span className="text-[10px] sm:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Bank</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Pay Button */}
-                                <Button
-                                    type="submit"
-                                    className="w-full h-16 rounded-2xl text-lg font-black tracking-widest uppercase gradient-primary text-white shadow-xl hover:-translate-y-1 hover:glow-primary transition-all border-0"
-                                    disabled={!isWalletTopupEnabled || isProcessing || !topUpAmount || parseFloat(topUpAmount) < MIN_AMOUNT}
-                                >
-                                    {!isWalletAccessible ? (
-                                        <>
-                                            <AlertTriangle className="w-5 h-5 mr-2" />
-                                            Temporarily Unavailable
-                                        </>
-                                    ) : isProcessing ? (
-                                        <>
-                                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                            Processing...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Plus className="w-5 h-5 mr-2" />
-                                            Top Up {topUpAmount && parseFloat(topUpAmount) >= MIN_AMOUNT && formatCurrency(parseFloat(topUpAmount))}
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
-                        </form>
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+                    <div>
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total Credited</span>
+                        </div>
+                        <p className="text-lg font-bold text-foreground">{formatCurrency(totalCredited)}</p>
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
+                            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total Spent</span>
+                        </div>
+                        <p className="text-lg font-bold text-foreground">{formatCurrency(totalDebited)}</p>
                     </div>
                 </div>
             </div>
 
-            {/* Recent Transactions */}
-            <div id="recent-activity" className="space-y-4">
-                <h2 className="text-xl font-black text-slate-900 dark:text-white px-2 tracking-tight drop-shadow-sm dark:drop-shadow-md">{dbUser?.role === 'agent' ? 'Recent Activity' : 'Today'}</h2>
-                <div className="glass-card rounded-[2rem] p-4 sm:p-6 border-slate-200 dark:border-white/5 relative z-10 shadow-sm dark:shadow-xl bg-white/50 dark:bg-black/40 backdrop-blur-xl">
-                    {transactions.length === 0 ? (
-                        <div className="text-center py-12">
-                            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-                                <Wallet className="w-8 h-8 text-slate-500/50" />
+            {/* Top Up Card */}
+            <div id="top-up-form" className="glass-card rounded-2xl border border-border">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10 border border-primary/10">
+                            <Plus className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                            <h2 className="text-sm font-semibold text-foreground">Top Up Wallet</h2>
+                            <p className="text-xs text-muted-foreground mt-0.5">Add funds via mobile money, card, or bank transfer</p>
+                        </div>
+                    </div>
+                    {isAgent && (
+                        <Badge variant="outline" className="text-[11px] font-medium text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 shrink-0">
+                            Paystack fee applies
+                        </Badge>
+                    )}
+                </div>
+
+                <form onSubmit={(e) => { e.preventDefault(); handleTopUp() }}>
+                    <div className="p-5 space-y-5">
+
+                        {/* Quick Amounts */}
+                        <div className="space-y-2">
+                            <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Quick Select</Label>
+                            <div className="grid grid-cols-4 gap-2">
+                                {QUICK_AMOUNTS.map((amount) => (
+                                    <Button
+                                        key={amount}
+                                        type="button"
+                                        onClick={() => handleQuickAmount(amount)}
+                                        className={cn(
+                                            "h-11 rounded-xl text-sm font-semibold transition-all duration-200 border",
+                                            topUpAmount === amount.toString()
+                                                ? "gradient-primary text-white border-primary/20 shadow-sm"
+                                                : "bg-secondary text-secondary-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 border-border shadow-none"
+                                        )}
+                                    >
+                                        {formatCurrency(amount)}
+                                    </Button>
+                                ))}
                             </div>
-                            <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No transactions yet</p>
+                        </div>
+
+                        {/* Custom Amount */}
+                        <div className="space-y-2">
+                            <Label htmlFor="amount" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Custom Amount</Label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground pointer-events-none select-none">GHS</span>
+                                <Input
+                                    id="amount"
+                                    type="number"
+                                    placeholder="0.00"
+                                    value={topUpAmount}
+                                    onChange={(e) => setTopUpAmount(e.target.value)}
+                                    className="pl-14 h-13 text-xl font-bold bg-background border-border text-foreground rounded-xl focus-visible:ring-primary/50"
+                                    min={MIN_AMOUNT}
+                                    step="any"
+                                />
+                            </div>
+                            <p className="text-[11px] text-muted-foreground pl-1">Minimum: {formatCurrency(MIN_AMOUNT)}</p>
+                        </div>
+
+                        {/* Fee Summary */}
+                        {isAmountValid && (
+                            <div className="p-4 rounded-xl bg-muted/40 border border-border space-y-2.5">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Top-up amount</span>
+                                    <span className="font-semibold text-foreground">{formatCurrency(parsedAmount)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Transaction fee ({paystackFeePercent}%)</span>
+                                    <span className="font-medium text-muted-foreground">{formatCurrency(fee)}</span>
+                                </div>
+                                <div className="h-px bg-border" />
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-semibold text-foreground">Total to pay</span>
+                                    <span className="text-lg font-bold text-primary">{formatCurrency(totalAmount)}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Payment Methods — informational */}
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-1.5">
+                                <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Accepted via Paystack</Label>
+                                <Info className="w-3 h-3 text-muted-foreground" />
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                                {[
+                                    { icon: Smartphone, label: 'Mobile Money', color: 'text-amber-600 dark:text-amber-400' },
+                                    { icon: CreditCard, label: 'Card', color: 'text-blue-600 dark:text-blue-400' },
+                                    { icon: Building, label: 'Bank Transfer', color: 'text-violet-600 dark:text-violet-400' },
+                                ].map(({ icon: Icon, label, color }) => (
+                                    <div key={label} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-border bg-muted/30">
+                                        <Icon className={cn('w-4 h-4', color)} />
+                                        <span className="text-[11px] font-medium text-muted-foreground text-center leading-tight">{label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Submit */}
+                        <Button
+                            type="submit"
+                            className="w-full h-12 rounded-xl text-sm font-semibold gradient-primary text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 border-0"
+                            disabled={!isWalletTopupEnabled || isProcessing || !isAmountValid}
+                        >
+                            {isProcessing ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Processing...
+                                </>
+                            ) : !isWalletTopupEnabled ? (
+                                <>
+                                    <AlertTriangle className="w-4 h-4 mr-2" />
+                                    Temporarily Unavailable
+                                </>
+                            ) : (
+                                <>
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    {isAmountValid ? `Top Up ${formatCurrency(parsedAmount)}` : 'Top Up Wallet'}
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </form>
+            </div>
+
+            {/* Recent Transactions */}
+            <div id="recent-activity" className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                    <h2 className="text-sm font-semibold text-foreground">
+                        {isAgent ? 'Recent Top-ups' : "Today's Top-ups"}
+                    </h2>
+                    {!isAgent && (
+                        <Link
+                            href="/dashboard/my-orders"
+                            className="flex items-center gap-0.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                        >
+                            View order history
+                            <ChevronRight className="w-3.5 h-3.5" />
+                        </Link>
+                    )}
+                </div>
+
+                <div className="glass-card rounded-2xl border border-border overflow-hidden">
+                    {transactions.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-14">
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mb-3">
+                                <Wallet className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                            <p className="text-sm font-medium text-muted-foreground">No transactions yet</p>
+                            <p className="text-xs text-muted-foreground/70 mt-0.5">
+                                {isAgent ? 'Your top-up history will appear here' : "Today's top-ups will appear here"}
+                            </p>
                         </div>
                     ) : (
-                        <div className="space-y-3">
+                        <div className="divide-y divide-border">
                             {transactions.map((txn) => (
                                 <div
                                     key={txn.id}
-                                    className="flex items-center justify-between p-4 rounded-2xl bg-white/60 dark:bg-black/40 hover:bg-slate-50 dark:hover:bg-white/5 border border-slate-100 dark:border-white/5 transition-colors group shadow-sm dark:shadow-none"
+                                    className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/30 transition-colors"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner ${txn.type === 'credit'
-                                            ? 'bg-emerald-500/20 shadow-[inset_0_2px_10px_rgba(16,185,129,0.2)]'
-                                            : 'bg-rose-500/20 shadow-[inset_0_2px_10px_rgba(225,29,72,0.2)]'
-                                            }`}>
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn(
+                                            'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+                                            txn.type === 'credit'
+                                                ? 'bg-emerald-50 dark:bg-emerald-500/10'
+                                                : 'bg-rose-50 dark:bg-rose-500/10'
+                                        )}>
                                             {txn.type === 'credit' ? (
-                                                <ArrowDownLeft className="w-5 h-5 text-emerald-400 drop-shadow-sm group-hover:scale-110 transition-transform" />
+                                                <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                                             ) : (
-                                                <ArrowUpRight className="w-5 h-5 text-rose-400 drop-shadow-sm group-hover:scale-110 transition-transform" />
+                                                <ArrowUpRight className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                                             )}
                                         </div>
-                                        <div>
-                                            <p className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">{txn.description}</p>
-                                            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-1">
-                                                {formatDate(txn.created_at)}
-                                            </p>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-medium text-foreground truncate">{txn.description}</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">{formatDate(txn.created_at)}</p>
                                         </div>
                                     </div>
-                                    <div className="text-right flex flex-col items-end gap-1.5">
-                                        <p className={`font-black text-lg tracking-tight ${txn.type === 'credit' ? 'text-emerald-400' : 'text-rose-400'
-                                            }`}>
+                                    <div className="flex flex-col items-end gap-1 shrink-0 ml-3">
+                                        <p className={cn(
+                                            'text-sm font-bold tabular-nums',
+                                            txn.type === 'credit' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                                        )}>
                                             {txn.type === 'credit' ? '+' : '-'}{formatCurrency(txn.amount)}
                                         </p>
-                                        <Badge className={cn("text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 border", txn.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30')}>
+                                        <span className={cn(
+                                            'inline-flex items-center px-1.5 py-0 rounded-full text-[10px] font-semibold border h-4',
+                                            txn.status === 'completed'
+                                                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
+                                                : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
+                                        )}>
                                             {txn.status}
-                                        </Badge>
+                                        </span>
                                     </div>
                                 </div>
                             ))}
@@ -560,6 +522,7 @@ function WalletContent() {
                     )}
                 </div>
             </div>
+
         </div>
     )
 }
@@ -567,13 +530,13 @@ function WalletContent() {
 export default function WalletPage() {
     return (
         <Suspense fallback={
-            <div className="space-y-6 p-6">
-                <Skeleton className="h-48 w-full max-w-md" />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {[...Array(3)].map((_, i) => (
-                        <Skeleton key={i} className="h-24" />
-                    ))}
+            <div className="space-y-6">
+                <div className="space-y-1.5">
+                    <Skeleton className="h-7 w-36 rounded-lg" />
+                    <Skeleton className="h-4 w-56 rounded-lg" />
                 </div>
+                <Skeleton className="h-44 w-full rounded-2xl" />
+                <Skeleton className="h-96 w-full rounded-2xl" />
             </div>
         }>
             <WalletContent />
