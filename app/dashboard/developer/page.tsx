@@ -46,11 +46,11 @@ export default function DeveloperPage() {
         setIsLoading(true)
         try {
             const res = await fetch('/api/user/api-keys')
-            if (!res.ok) throw new Error('Failed to fetch keys')
             const data = await res.json()
+            if (!res.ok) throw new Error(data?.error || 'Failed to fetch keys')
             setKeys(data)
-        } catch (error) {
-            toast.error('Could not load API keys')
+        } catch (error: any) {
+            toast.error(error?.message || 'Could not load API keys')
         } finally {
             setIsLoading(false)
         }
