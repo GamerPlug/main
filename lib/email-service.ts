@@ -885,7 +885,7 @@ export async function sendAdminNewComplaintAlert(
         orderRef: string
         title: string
         description: string
-        priority: string
+        priority?: string
     }
 ): Promise<EmailResult> {
     const adminEmail = process.env.ADMIN_EMAIL || 'support@mydatagh.com'
@@ -921,7 +921,7 @@ export async function sendAdminNewComplaintAlert(
             <div class="info-row">
                 <span class="info-label">Priority</span>
                 <span class="info-value" style="color: ${complaintDetails.priority === 'high' ? '#ef4444' : '#f59e0b'}">
-                    ${complaintDetails.priority.toUpperCase()}
+                    ${(complaintDetails.priority ?? 'medium').toUpperCase()}
                 </span>
             </div>
             <div class="info-row">

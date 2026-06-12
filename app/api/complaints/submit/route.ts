@@ -6,7 +6,7 @@ import { sendAdminNewComplaintAlert } from '@/lib/email-service'
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { order_id, title, description, priority = 'medium' } = body
+        const { order_id, title, description } = body
 
         if (!order_id || !title || !description) {
             return NextResponse.json(
@@ -40,7 +40,6 @@ export async function POST(request: Request) {
                 title,
                 description,
                 status: 'pending',
-                priority,
             })
             .select()
             .single()
@@ -70,7 +69,6 @@ export async function POST(request: Request) {
                     orderRef: orderData.reference_code,
                     title,
                     description,
-                    priority
                 })
             } catch (emailError) {
                 console.error('Failed to send admin alert:', emailError)
