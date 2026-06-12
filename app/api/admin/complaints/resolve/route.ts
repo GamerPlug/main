@@ -15,6 +15,13 @@ export async function POST(request: Request) {
             )
         }
 
+        if (status !== 'resolved' && status !== 'rejected') {
+            return NextResponse.json(
+                { error: 'Invalid status value' },
+                { status: 400 }
+            )
+        }
+
         const supabase = createServerClient()
 
         // Update complaint

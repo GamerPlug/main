@@ -426,7 +426,7 @@ export default function MyOrdersPage() {
                                     {hasComplaint ? (
                                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border bg-muted/50 border-border text-muted-foreground">
                                             <MessageSquare className="w-3 h-3" />
-                                            {order.complaints![0].status.replace('_', ' ')}
+                                            {order.complaints![0].status.replaceAll('_', ' ')}
                                         </div>
                                     ) : canComplain ? (
                                         <Button
