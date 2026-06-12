@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
         if (orderError) {
             console.error('[bulk] Order insert error:', orderError)
             await supabase.rpc('refund_wallet', { p_user_id: userId, p_amount: totalCost })
-            return NextResponse.json({ error: 'Failed to create orders. Wallet refunded.', _debug: orderError.message }, { status: 500 })
+            return NextResponse.json({ error: 'Failed to create orders. Wallet refunded.' }, { status: 500 })
         }
 
         // 9. Record wallet transactions
