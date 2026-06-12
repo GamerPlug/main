@@ -1,10 +1,35 @@
 import type { NextConfig } from 'next'
 
+const securityHeaders = [
+    { key: 'X-Frame-Options', value: 'DENY' },
+    { key: 'X-Content-Type-Options', value: 'nosniff' },
+    { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+    { key: 'X-XSS-Protection', value: '1; mode=block' },
+    { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()' },
+    { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+    {
+        key: 'Content-Security-Policy',
+        value: [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.paystack.co",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "font-src 'self' https://fonts.gstatic.com",
+            "img-src 'self' data: https://*.supabase.co https://cdn.jsdelivr.net blob:",
+            "connect-src 'self' https://*.supabase.co https://api.paystack.co wss://*.supabase.co",
+            "frame-src https://js.paystack.co",
+            "frame-ancestors 'none'",
+        ].join('; '),
+    },
+]
+
 const nextConfig: NextConfig = {
-    transpilePackages: ['date-fns'],
     reactStrictMode: true,
     poweredByHeader: false,
+    compiler: {
+        removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+    },
     images: {
+        formats: ['image/avif', 'image/webp'],
         domains: ['localhost'],
         remotePatterns: [
             {
@@ -12,65 +37,41 @@ const nextConfig: NextConfig = {
                 hostname: '**.supabase.co',
             },
         ],
-    },
-    experimental: {
+        minimumCacheTTL: 60,
     },
     async headers() {
         return [
+            // Long-lived immutable cache for content-hashed static assets
             {
-                source: '/:path*',
+                source: '/_next/static/:path*',
                 headers: [
-                    // Cache Control
-                    {
-                        key: 'Cache-Control',
-                        value: 'no-store, no-cache, max-age=0, must-revalidate, proxy-revalidate',
-                    },
-                    {
-                        key: 'Pragma',
-                        value: 'no-cache',
-                    },
-                    {
-                        key: 'Expires',
-                        value: '0',
-                    },
-                    // Security Headers
-                    {
-                        key: 'X-Frame-Options',
-                        value: 'DENY',
-                    },
-                    {
-                        key: 'X-Content-Type-Options',
-                        value: 'nosniff',
-                    },
-                    {
-                        key: 'Referrer-Policy',
-                        value: 'strict-origin-when-cross-origin',
-                    },
-                    {
-                        key: 'X-XSS-Protection',
-                        value: '1; mode=block',
-                    },
-                    {
-                        key: 'Permissions-Policy',
-                        value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
-                    },
-                    {
-                        key: 'Strict-Transport-Security',
-                        value: 'max-age=31536000; includeSubDomains',
-                    },
-                    {
-                        key: 'Content-Security-Policy',
-                        value: [
-                            "default-src 'self'",
-                            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.paystack.co",
-                            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-                            "font-src 'self' https://fonts.gstatic.com",
-                            "img-src 'self' data: https://*.supabase.co https://cdn.jsdelivr.net blob:",
-                            "connect-src 'self' https://*.supabase.co https://api.paystack.co wss://*.supabase.co",
-                            "frame-src https://js.paystack.co",
-                            "frame-ancestors 'none'",
-                        ].join('; '),
-                    },
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                    ...securityHeaders,
+                ],
+            },
+            // Images can be cached for a day
+            {
+                source: '/_next/image:path*',
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
+                    ...securityHeaders,
+                ],
+            },
+            // Public static files (icons, fonts, etc.)
+            {
+                source: '/fonts/:path*',
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
+            },
+            // All other routes: no-store to keep data fresh (auth + real-time app)
+            {
+                source: '/((?!_next/static|_next/image|fonts).*)',
+                headers: [
+                    { key: 'Cache-Control', value: 'no-store, no-cache, max-age=0, must-revalidate' },
+                    { key: 'Pragma', value: 'no-cache' },
+                    { key: 'Expires', value: '0' },
+                    ...securityHeaders,
                 ],
             },
         ]
