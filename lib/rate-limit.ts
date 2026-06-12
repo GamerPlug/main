@@ -3,6 +3,7 @@ import { Redis } from '@upstash/redis'
 
 let _redis: Redis | null = null
 let _paymentRatelimit: Ratelimit | null = null
+let _bulkOrderRatelimit: Ratelimit | null = null
 
 export function getRedis(): Redis {
     if (!_redis) {
@@ -21,6 +22,7 @@ export function getRedis(): Redis {
 export function resetRatelimitSingletons() {
     _redis = null
     _paymentRatelimit = null
+    _bulkOrderRatelimit = null
 }
 
 // 10 payment init attempts per user per minute
@@ -33,4 +35,16 @@ export function getPaymentRatelimit(): Ratelimit {
         })
     }
     return _paymentRatelimit
+}
+
+// 5 bulk-order requests per API key per minute (each request can contain up to 100 orders)
+export function getBulkOrderRatelimit(): Ratelimit {
+    if (!_bulkOrderRatelimit) {
+        _bulkOrderRatelimit = new Ratelimit({
+            redis: getRedis(),
+            limiter: Ratelimit.slidingWindow(5, '1 m'),
+            prefix: 'gamerplug:api:bulk',
+        })
+    }
+    return _bulkOrderRatelimit
 }
