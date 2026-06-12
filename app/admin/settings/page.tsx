@@ -1,46 +1,162 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, Save } from 'lucide-react'
+import { Loader2, Save, Settings, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
+interface SettingsState {
+    paystackFee: string
+    agentPaystackFee: string
+    mtnAdjustment: string
+    agentUpgradePrice: string
+    afaPriceUser: string
+    afaPriceAgent: string
+    supportEmail: string
+    contactPhone: string
+    contactWhatsApp: string
+    contactAddress: string
+    whatsappGroupLink: string
+    whatsappChannelLink: string
+    autoFulfillment: boolean
+    guestPurchaseEnabled: boolean
+    walletTopupEnabled: boolean
+    pageAccessDashboard: boolean
+    pageAccessDataPackages: boolean
+    pageAccessOrders: boolean
+    pageAccessWallet: boolean
+    pageAccessComplaints: boolean
+    pageAccessNotifications: boolean
+    pageAccessProfile: boolean
+}
+
+const DEFAULTS: SettingsState = {
+    paystackFee: '1.95',
+    agentPaystackFee: '1.95',
+    mtnAdjustment: '0',
+    agentUpgradePrice: '100',
+    afaPriceUser: '15',
+    afaPriceAgent: '15',
+    supportEmail: '',
+    contactPhone: '',
+    contactWhatsApp: '',
+    contactAddress: '',
+    whatsappGroupLink: '',
+    whatsappChannelLink: '',
+    autoFulfillment: true,
+    guestPurchaseEnabled: true,
+    walletTopupEnabled: true,
+    pageAccessDashboard: true,
+    pageAccessDataPackages: true,
+    pageAccessOrders: true,
+    pageAccessWallet: true,
+    pageAccessComplaints: true,
+    pageAccessNotifications: true,
+    pageAccessProfile: true,
+}
+
+function settingsFromMap(map: Record<string, string>): SettingsState {
+    return {
+        paystackFee: map.paystack_fee_percent ?? DEFAULTS.paystackFee,
+        agentPaystackFee: map.agent_paystack_fee_percent ?? DEFAULTS.agentPaystackFee,
+        mtnAdjustment: map.mtn_price_adjustment ?? DEFAULTS.mtnAdjustment,
+        agentUpgradePrice: map.agent_upgrade_price ?? DEFAULTS.agentUpgradePrice,
+        afaPriceUser: map.afa_price_user ?? DEFAULTS.afaPriceUser,
+        afaPriceAgent: map.afa_price_agent ?? DEFAULTS.afaPriceAgent,
+        supportEmail: map.support_email ?? '',
+        contactPhone: map.contact_phone ?? '',
+        contactWhatsApp: map.contact_whatsapp ?? '',
+        contactAddress: map.contact_address ?? '',
+        whatsappGroupLink: map.whatsapp_group_link ?? '',
+        whatsappChannelLink: map.whatsapp_channel_link ?? '',
+        // Bug fix: use !== 'false' consistently so missing keys default to true
+        autoFulfillment: map.auto_fulfillment_enabled !== 'false',
+        guestPurchaseEnabled: map.guest_purchase_enabled !== 'false',
+        walletTopupEnabled: map.wallet_topup_enabled !== 'false',
+        pageAccessDashboard: map.page_access_dashboard !== 'false',
+        pageAccessDataPackages: map.page_access_data_packages !== 'false',
+        pageAccessOrders: map.page_access_orders !== 'false',
+        pageAccessWallet: map.page_access_wallet !== 'false',
+        pageAccessComplaints: map.page_access_complaints !== 'false',
+        pageAccessNotifications: map.page_access_notifications !== 'false',
+        pageAccessProfile: map.page_access_profile !== 'false',
+    }
+}
+
+function settingsToUpsert(s: SettingsState) {
+    return [
+        { key: 'paystack_fee_percent', value: s.paystackFee },
+        { key: 'agent_paystack_fee_percent', value: s.agentPaystackFee },
+        { key: 'mtn_price_adjustment', value: s.mtnAdjustment },
+        { key: 'agent_upgrade_price', value: s.agentUpgradePrice },
+        { key: 'afa_price_user', value: s.afaPriceUser },
+        { key: 'afa_price_agent', value: s.afaPriceAgent },
+        { key: 'support_email', value: s.supportEmail },
+        { key: 'contact_phone', value: s.contactPhone },
+        { key: 'contact_whatsapp', value: s.contactWhatsApp },
+        { key: 'contact_address', value: s.contactAddress },
+        { key: 'whatsapp_group_link', value: s.whatsappGroupLink },
+        { key: 'whatsapp_channel_link', value: s.whatsappChannelLink },
+        { key: 'auto_fulfillment_enabled', value: String(s.autoFulfillment) },
+        { key: 'guest_purchase_enabled', value: String(s.guestPurchaseEnabled) },
+        { key: 'wallet_topup_enabled', value: String(s.walletTopupEnabled) },
+        { key: 'page_access_dashboard', value: String(s.pageAccessDashboard) },
+        { key: 'page_access_data_packages', value: String(s.pageAccessDataPackages) },
+        { key: 'page_access_orders', value: String(s.pageAccessOrders) },
+        { key: 'page_access_wallet', value: String(s.pageAccessWallet) },
+        { key: 'page_access_complaints', value: String(s.pageAccessComplaints) },
+        { key: 'page_access_notifications', value: String(s.pageAccessNotifications) },
+        { key: 'page_access_profile', value: String(s.pageAccessProfile) },
+    ]
+}
+
+function ToggleRow({
+    label,
+    description,
+    checked,
+    onCheckedChange,
+    id,
+}: {
+    label: string
+    description: string
+    checked: boolean
+    onCheckedChange: (v: boolean) => void
+    id: string
+}) {
+    return (
+        <div className="flex items-center justify-between p-4 border rounded-lg bg-white hover:bg-slate-50 transition-colors">
+            <div className="space-y-0.5 flex-1 mr-4">
+                <div className="flex items-center gap-2">
+                    <Label htmlFor={id} className="text-sm font-medium cursor-pointer">{label}</Label>
+                    <Badge variant={checked ? 'default' : 'secondary'} className="text-xs h-4 px-1.5">
+                        {checked ? 'On' : 'Off'}
+                    </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">{description}</p>
+            </div>
+            <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
+        </div>
+    )
+}
+
 export default function AdminSettingsPage() {
-    const [settings, setSettings] = useState<any>({})
+    const [form, setForm] = useState<SettingsState>(DEFAULTS)
+    const [saved, setSaved] = useState<SettingsState>(DEFAULTS)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
 
-    // Form states
-    const [paystackFee, setPaystackFee] = useState('1.95')
-    const [agentPaystackFee, setAgentPaystackFee] = useState('1.95')
-    const [mtnAdjustment, setMtnAdjustment] = useState('0')
-    const [agentUpgradePrice, setAgentUpgradePrice] = useState('100')
-    const [afaPriceUser, setAfaPriceUser] = useState('15')
-    const [afaPriceAgent, setAfaPriceAgent] = useState('15')
-    const [supportEmail, setSupportEmail] = useState('')
-    const [contactPhone, setContactPhone] = useState('')
-    const [contactWhatsApp, setContactWhatsApp] = useState('')
-    const [contactAddress, setContactAddress] = useState('')
-    const [whatsappGroupLink, setWhatsappGroupLink] = useState('')
-    const [whatsappChannelLink, setWhatsappChannelLink] = useState('')
-    const [autoFulfillment, setAutoFulfillment] = useState(true)
-    const [guestPurchaseEnabled, setGuestPurchaseEnabled] = useState(true)
-    const [walletTopupEnabled, setWalletTopupEnabled] = useState(true)
+    const hasChanges = JSON.stringify(form) !== JSON.stringify(saved)
 
-    // Page access states
-    const [pageAccessDashboard, setPageAccessDashboard] = useState(true)
-    const [pageAccessDataPackages, setPageAccessDataPackages] = useState(true)
-    const [pageAccessOrders, setPageAccessOrders] = useState(true)
-    const [pageAccessWallet, setPageAccessWallet] = useState(true)
-    const [pageAccessComplaints, setPageAccessComplaints] = useState(true)
-    const [pageAccessNotifications, setPageAccessNotifications] = useState(true)
-    const [pageAccessProfile, setPageAccessProfile] = useState(true)
+    const set = useCallback(<K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
+        setForm(prev => ({ ...prev, [key]: value }))
+    }, [])
 
     useEffect(() => {
         fetchSettings()
@@ -50,43 +166,21 @@ export default function AdminSettingsPage() {
         try {
             const { data, error } = await (supabase
                 .from('admin_settings') as any)
-                .select('*')
+                .select('key, value')
 
             if (error) throw error
 
-            const settingsMap = data.reduce((acc: any, curr: any) => {
-                acc[curr.key] = curr.value
-                return acc
-            }, {})
+            const map: Record<string, string> = (data ?? []).reduce(
+                (acc: Record<string, string>, curr: { key: string; value: string }) => {
+                    acc[curr.key] = curr.value
+                    return acc
+                },
+                {}
+            )
 
-            setSettings(settingsMap)
-
-            // Initialize form values
-            setPaystackFee(settingsMap.paystack_fee_percent || '1.95')
-            setAgentPaystackFee(settingsMap.agent_paystack_fee_percent || '1.95')
-            setMtnAdjustment(settingsMap.mtn_price_adjustment || '0')
-            setAgentUpgradePrice(settingsMap.agent_upgrade_price || '100')
-            setAfaPriceUser(settingsMap.afa_price_user || '15')
-            setAfaPriceAgent(settingsMap.afa_price_agent || '15')
-            setSupportEmail(settingsMap.support_email || '')
-            setContactPhone(settingsMap.contact_phone || '')
-            setContactWhatsApp(settingsMap.contact_whatsapp || '')
-            setContactAddress(settingsMap.contact_address || '')
-            setWhatsappGroupLink(settingsMap.whatsapp_group_link || '')
-            setWhatsappChannelLink(settingsMap.whatsapp_channel_link || '')
-            setAutoFulfillment(settingsMap.auto_fulfillment_enabled === 'true')
-            setGuestPurchaseEnabled(settingsMap.guest_purchase_enabled !== 'false')
-            setWalletTopupEnabled(settingsMap.wallet_topup_enabled !== 'false')
-
-            // Initialize page access values
-            setPageAccessDashboard(settingsMap.page_access_dashboard !== 'false')
-            setPageAccessDataPackages(settingsMap.page_access_data_packages !== 'false')
-            setPageAccessOrders(settingsMap.page_access_orders !== 'false')
-            setPageAccessWallet(settingsMap.page_access_wallet !== 'false')
-            setPageAccessComplaints(settingsMap.page_access_complaints !== 'false')
-            setPageAccessNotifications(settingsMap.page_access_notifications !== 'false')
-            setPageAccessProfile(settingsMap.page_access_profile !== 'false')
-
+            const loaded = settingsFromMap(map)
+            setForm(loaded)
+            setSaved(loaded)
         } catch (error) {
             console.error('Error fetching settings:', error)
             toast.error('Failed to load settings')
@@ -98,37 +192,14 @@ export default function AdminSettingsPage() {
     const saveSettings = async () => {
         setSaving(true)
         try {
-            const updates = [
-                { key: 'paystack_fee_percent', value: paystackFee },
-                { key: 'agent_paystack_fee_percent', value: agentPaystackFee },
-                { key: 'mtn_price_adjustment', value: mtnAdjustment },
-                { key: 'agent_upgrade_price', value: agentUpgradePrice },
-                { key: 'afa_price_user', value: afaPriceUser },
-                { key: 'afa_price_agent', value: afaPriceAgent },
-                { key: 'support_email', value: supportEmail },
-                { key: 'contact_phone', value: contactPhone },
-                { key: 'contact_whatsapp', value: contactWhatsApp },
-                { key: 'contact_address', value: contactAddress },
-                { key: 'whatsapp_group_link', value: whatsappGroupLink },
-                { key: 'whatsapp_channel_link', value: whatsappChannelLink },
-                { key: 'auto_fulfillment_enabled', value: String(autoFulfillment) },
-                { key: 'guest_purchase_enabled', value: String(guestPurchaseEnabled) },
-                { key: 'wallet_topup_enabled', value: String(walletTopupEnabled) },
-                // Page access settings
-                { key: 'page_access_dashboard', value: String(pageAccessDashboard) },
-                { key: 'page_access_data_packages', value: String(pageAccessDataPackages) },
-                { key: 'page_access_orders', value: String(pageAccessOrders) },
-                { key: 'page_access_wallet', value: String(pageAccessWallet) },
-                { key: 'page_access_complaints', value: String(pageAccessComplaints) },
-                { key: 'page_access_notifications', value: String(pageAccessNotifications) },
-                { key: 'page_access_profile', value: String(pageAccessProfile) }
-            ]
-
+            // Bug fix: onConflict: 'key' ensures upsert updates existing rows instead of inserting duplicates
             const { error } = await (supabase
                 .from('admin_settings') as any)
-                .upsert(updates)
+                .upsert(settingsToUpsert(form), { onConflict: 'key' })
 
             if (error) throw error
+
+            setSaved(form)
             toast.success('Settings saved successfully')
         } catch (error) {
             console.error('Error saving settings:', error)
@@ -139,326 +210,347 @@ export default function AdminSettingsPage() {
     }
 
     if (loading) {
-        return <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div>
+        return (
+            <div className="p-12 flex flex-col items-center gap-3 text-muted-foreground">
+                <Loader2 className="animate-spin w-6 h-6" />
+                <p className="text-sm">Loading settings…</p>
+            </div>
+        )
     }
 
     return (
         <div className="space-y-6 max-w-4xl">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900">GAMER PLUG Settings</h1>
-                    <p className="text-muted-foreground">Configure detailed platform parameters</p>
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
+                        <Settings className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-bold text-slate-900">Platform Settings</h1>
+                        <p className="text-sm text-muted-foreground">Configure platform parameters and access controls</p>
+                    </div>
                 </div>
-                <Button onClick={saveSettings} disabled={saving}>
-                    {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
-                </Button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    {hasChanges && (
+                        <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            Unsaved
+                        </Badge>
+                    )}
+                    <Button onClick={saveSettings} disabled={saving || !hasChanges} size="sm">
+                        {saving ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                            <Save className="w-4 h-4 mr-2" />
+                        )}
+                        {saving ? 'Saving…' : 'Save Changes'}
+                    </Button>
+                </div>
             </div>
 
             <Tabs defaultValue="general">
-                <TabsList>
+                <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="general">General</TabsTrigger>
                     <TabsTrigger value="fees">Fees & Pricing</TabsTrigger>
                     <TabsTrigger value="fulfillment">Fulfillment</TabsTrigger>
                     <TabsTrigger value="access">Page Access</TabsTrigger>
                 </TabsList>
 
+                {/* ── General ── */}
                 <TabsContent value="general" className="space-y-4 mt-4">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Support Information</CardTitle>
-                            <CardDescription>Contact details displayed to users</CardDescription>
+                            <CardTitle className="text-base">Support Information</CardTitle>
+                            <CardDescription>Contact details displayed to users across the platform</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label>Support Email</Label>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="support-email">Support Email</Label>
                                 <Input
-                                    value={supportEmail}
-                                    onChange={(e) => setSupportEmail(e.target.value)}
+                                    id="support-email"
+                                    type="email"
+                                    value={form.supportEmail}
+                                    onChange={e => set('supportEmail', e.target.value)}
                                     placeholder="support@gamerplug.com"
                                 />
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Contact Phone</Label>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="contact-phone">Contact Phone</Label>
                                     <Input
-                                        value={contactPhone}
-                                        onChange={(e) => setContactPhone(e.target.value)}
+                                        id="contact-phone"
+                                        value={form.contactPhone}
+                                        onChange={e => set('contactPhone', e.target.value)}
                                         placeholder="+233 24 123 4567"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>WhatsApp Number</Label>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="contact-whatsapp">WhatsApp Number</Label>
                                     <Input
-                                        value={contactWhatsApp}
-                                        onChange={(e) => setContactWhatsApp(e.target.value)}
-                                        placeholder="+233 24 123 4567"
+                                        id="contact-whatsapp"
+                                        value={form.contactWhatsApp}
+                                        onChange={e => set('contactWhatsApp', e.target.value)}
+                                        placeholder="233241234567"
                                     />
+                                    <p className="text-xs text-muted-foreground">Digits only, with country code (e.g. 233…)</p>
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label>Contact Address</Label>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="contact-address">Contact Address</Label>
                                 <Input
-                                    value={contactAddress}
-                                    onChange={(e) => setContactAddress(e.target.value)}
+                                    id="contact-address"
+                                    value={form.contactAddress}
+                                    onChange={e => set('contactAddress', e.target.value)}
                                     placeholder="Accra, Ghana"
                                 />
                             </div>
+                        </CardContent>
+                    </Card>
 
-                            <div className="pt-4 border-t space-y-4">
-                                <h3 className="text-sm font-semibold">Community Links</h3>
-                                <div className="space-y-2">
-                                    <Label>WhatsApp Group Link</Label>
-                                    <Input
-                                        value={whatsappGroupLink}
-                                        onChange={(e) => setWhatsappGroupLink(e.target.value)}
-                                        placeholder="https://chat.whatsapp.com/..."
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>WhatsApp Channel Link</Label>
-                                    <Input
-                                        value={whatsappChannelLink}
-                                        onChange={(e) => setWhatsappChannelLink(e.target.value)}
-                                        placeholder="https://whatsapp.com/channel/..."
-                                    />
-                                </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Community Links</CardTitle>
+                            <CardDescription>WhatsApp links shown to users for community access</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="wa-group">WhatsApp Group Link</Label>
+                                <Input
+                                    id="wa-group"
+                                    value={form.whatsappGroupLink}
+                                    onChange={e => set('whatsappGroupLink', e.target.value)}
+                                    placeholder="https://chat.whatsapp.com/..."
+                                />
                             </div>
-
-                            <div className="pt-4 border-t space-y-4">
-                                <h3 className="text-sm font-semibold">Feature Toggles</h3>
-                                <div className="flex items-center justify-between p-4 border rounded-lg">
-                                    <div className="space-y-0.5">
-                                        <Label className="text-base">Guest Purchase</Label>
-                                        <p className="text-sm text-muted-foreground">
-                                            Allow users to purchase data without an account
-                                        </p>
-                                    </div>
-                                    <Switch
-                                        id="guest-purchase-toggle"
-                                        name="guest-purchase-toggle"
-                                        checked={guestPurchaseEnabled}
-                                        onCheckedChange={setGuestPurchaseEnabled}
-                                    />
-                                </div>
-
-                                <div className="flex items-center justify-between p-4 border rounded-lg">
-                                    <div className="space-y-0.5">
-                                        <Label className="text-base">Wallet Top-up</Label>
-                                        <p className="text-sm text-muted-foreground">
-                                            Allow users to top up their wallets via Paystack
-                                        </p>
-                                    </div>
-                                    <Switch
-                                        id="wallet-topup-toggle"
-                                        name="wallet-topup-toggle"
-                                        checked={walletTopupEnabled}
-                                        onCheckedChange={setWalletTopupEnabled}
-                                    />
-                                </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="wa-channel">WhatsApp Channel Link</Label>
+                                <Input
+                                    id="wa-channel"
+                                    value={form.whatsappChannelLink}
+                                    onChange={e => set('whatsappChannelLink', e.target.value)}
+                                    placeholder="https://whatsapp.com/channel/..."
+                                />
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Feature Toggles</CardTitle>
+                            <CardDescription>Enable or disable user-facing platform features</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <ToggleRow
+                                id="guest-purchase"
+                                label="Guest Purchase"
+                                description="Allow purchases without an account"
+                                checked={form.guestPurchaseEnabled}
+                                onCheckedChange={v => set('guestPurchaseEnabled', v)}
+                            />
+                            <ToggleRow
+                                id="wallet-topup"
+                                label="Wallet Top-up"
+                                description="Allow users to fund their wallets via Paystack"
+                                checked={form.walletTopupEnabled}
+                                onCheckedChange={v => set('walletTopupEnabled', v)}
+                            />
                         </CardContent>
                     </Card>
                 </TabsContent>
 
+                {/* ── Fees & Pricing ── */}
                 <TabsContent value="fees" className="space-y-4 mt-4">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Payment & Fees</CardTitle>
-                            <CardDescription>Configure transaction fees</CardDescription>
+                            <CardTitle className="text-base">Paystack Fees</CardTitle>
+                            <CardDescription>Transaction fees added during wallet top-up</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label>Paystack Fee Percentage (%)</Label>
-                                <Input
-                                    type="number"
-                                    value={paystackFee}
-                                    onChange={(e) => setPaystackFee(e.target.value)}
-                                    step="0.01"
-                                />
-                                <p className="text-xs text-muted-foreground">Fee passed on to regular users during wallet top-up</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="paystack-fee">Regular User Fee (%)</Label>
+                                    <Input
+                                        id="paystack-fee"
+                                        type="number"
+                                        value={form.paystackFee}
+                                        onChange={e => set('paystackFee', e.target.value)}
+                                        step="0.01"
+                                        min="0"
+                                        max="10"
+                                    />
+                                    <p className="text-xs text-muted-foreground">Passed on to regular users</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="agent-paystack-fee">Agent Fee (%)</Label>
+                                    <Input
+                                        id="agent-paystack-fee"
+                                        type="number"
+                                        value={form.agentPaystackFee}
+                                        onChange={e => set('agentPaystackFee', e.target.value)}
+                                        step="0.01"
+                                        min="0"
+                                        max="10"
+                                    />
+                                    <p className="text-xs text-muted-foreground">Passed on to agents</p>
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label>Agent Paystack Fee Percentage (%)</Label>
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="mtn-adjustment">MTN Price Adjustment (GHS)</Label>
                                 <Input
+                                    id="mtn-adjustment"
                                     type="number"
-                                    value={agentPaystackFee}
-                                    onChange={(e) => setAgentPaystackFee(e.target.value)}
+                                    value={form.mtnAdjustment}
+                                    onChange={e => set('mtnAdjustment', e.target.value)}
                                     step="0.01"
                                 />
-                                <p className="text-xs text-muted-foreground">Fee passed on to AGENTS during wallet top-up</p>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>MTN Price Adjustment (GHS)</Label>
-                                <Input
-                                    type="number"
-                                    value={mtnAdjustment}
-                                    onChange={(e) => setMtnAdjustment(e.target.value)}
-                                    step="0.01"
-                                />
-                                <p className="text-xs text-muted-foreground">Additional markup fee for all MTN packages</p>
+                                <p className="text-xs text-muted-foreground">Additional markup applied to all MTN packages</p>
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>AFA Application Pricing</CardTitle>
-                            <CardDescription>Set application fees for Authorized Field Agent registrations</CardDescription>
+                            <CardTitle className="text-base">Agent Upgrade</CardTitle>
+                            <CardDescription>One-time fee to upgrade a user account to agent tier</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="agent-upgrade-price">Agent Upgrade Price (GHS)</Label>
+                                <Input
+                                    id="agent-upgrade-price"
+                                    type="number"
+                                    value={form.agentUpgradePrice}
+                                    onChange={e => set('agentUpgradePrice', e.target.value)}
+                                    step="1"
+                                    min="0"
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">AFA Application Fees</CardTitle>
+                            <CardDescription>Fees for Authorized Field Agent registration applications</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label>User Application Fee (GHS)</Label>
-                                <Input
-                                    type="number"
-                                    value={afaPriceUser}
-                                    onChange={(e) => setAfaPriceUser(e.target.value)}
-                                    step="0.01"
-                                    min="0"
-                                />
-                                <p className="text-xs text-muted-foreground">Fee charged to users for AFA application</p>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Agent Application Fee (GHS)</Label>
-                                <Input
-                                    type="number"
-                                    value={afaPriceAgent}
-                                    onChange={(e) => setAfaPriceAgent(e.target.value)}
-                                    step="0.01"
-                                    min="0"
-                                />
-                                <p className="text-xs text-muted-foreground">Fee charged to agents for AFA application</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="afa-user">User Application Fee (GHS)</Label>
+                                    <Input
+                                        id="afa-user"
+                                        type="number"
+                                        value={form.afaPriceUser}
+                                        onChange={e => set('afaPriceUser', e.target.value)}
+                                        step="0.01"
+                                        min="0"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="afa-agent">Agent Application Fee (GHS)</Label>
+                                    <Input
+                                        id="afa-agent"
+                                        type="number"
+                                        value={form.afaPriceAgent}
+                                        onChange={e => set('afaPriceAgent', e.target.value)}
+                                        step="0.01"
+                                        min="0"
+                                    />
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
 
+                {/* ── Fulfillment ── */}
                 <TabsContent value="fulfillment" className="space-y-4 mt-4">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Auto Fulfillment</CardTitle>
-                            <CardDescription>Control automated order processing</CardDescription>
+                            <CardTitle className="text-base">Order Fulfillment</CardTitle>
+                            <CardDescription>Control how orders are processed and delivered</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base">Enable Auto-Fulfillment</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        Automatically process orders via APIs
-                                    </p>
+                        <CardContent className="space-y-3">
+                            <ToggleRow
+                                id="auto-fulfillment"
+                                label="Auto-Fulfillment"
+                                description="Automatically process and fulfill orders via provider APIs without manual intervention"
+                                checked={form.autoFulfillment}
+                                onCheckedChange={v => set('autoFulfillment', v)}
+                            />
+                            {!form.autoFulfillment && (
+                                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                    <p>Auto-fulfillment is disabled. All orders will require manual processing by an admin.</p>
                                 </div>
-                                <Switch
-                                    checked={autoFulfillment}
-                                    onCheckedChange={setAutoFulfillment}
-                                />
-                            </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
 
+                {/* ── Page Access ── */}
                 <TabsContent value="access" className="space-y-4 mt-4">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Page Access Control</CardTitle>
+                            <CardTitle className="text-base">Page Access Control</CardTitle>
                             <CardDescription>
-                                Control which pages are accessible to non-admin users (users, agents, sub-admins).
-                                Admins always have full access. Disabled pages will be hidden from navigation and blocked if accessed directly.
+                                Toggle which pages non-admin users can access. Admins always have full access.
+                                Disabled pages are hidden from navigation and blocked on direct visit.
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base">Dashboard/Home</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        Main dashboard page
-                                    </p>
-                                </div>
-                                <Switch
-                                    checked={pageAccessDashboard}
-                                    onCheckedChange={setPageAccessDashboard}
-                                />
-                            </div>
-
-                            <div className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base">Data Packages</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        Browse and purchase data packages
-                                    </p>
-                                </div>
-                                <Switch
-                                    checked={pageAccessDataPackages}
-                                    onCheckedChange={setPageAccessDataPackages}
-                                />
-                            </div>
-
-                            <div className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base">Orders</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        View order history and status
-                                    </p>
-                                </div>
-                                <Switch
-                                    checked={pageAccessOrders}
-                                    onCheckedChange={setPageAccessOrders}
-                                />
-                            </div>
-
-                            <div className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base">Wallet</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        Wallet balance and top-up functionality
-                                    </p>
-                                </div>
-                                <Switch
-                                    checked={pageAccessWallet}
-                                    onCheckedChange={setPageAccessWallet}
-                                />
-                            </div>
-
-                            <div className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base">Complaints</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        Submit and view complaints
-                                    </p>
-                                </div>
-                                <Switch
-                                    checked={pageAccessComplaints}
-                                    onCheckedChange={setPageAccessComplaints}
-                                />
-                            </div>
-
-                            <div className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base">Notifications</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        View system notifications
-                                    </p>
-                                </div>
-                                <Switch
-                                    checked={pageAccessNotifications}
-                                    onCheckedChange={setPageAccessNotifications}
-                                />
-                            </div>
-
-                            <div className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base">Profile</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        User profile and settings
-                                    </p>
-                                </div>
-                                <Switch
-                                    checked={pageAccessProfile}
-                                    onCheckedChange={setPageAccessProfile}
-                                />
-                            </div>
+                        <CardContent className="space-y-3">
+                            <ToggleRow
+                                id="access-dashboard"
+                                label="Dashboard / Home"
+                                description="Main overview page with stats and activity"
+                                checked={form.pageAccessDashboard}
+                                onCheckedChange={v => set('pageAccessDashboard', v)}
+                            />
+                            <ToggleRow
+                                id="access-data-packages"
+                                label="Data Packages"
+                                description="Browse and purchase data bundles"
+                                checked={form.pageAccessDataPackages}
+                                onCheckedChange={v => set('pageAccessDataPackages', v)}
+                            />
+                            <ToggleRow
+                                id="access-orders"
+                                label="Orders"
+                                description="View order history and track status"
+                                checked={form.pageAccessOrders}
+                                onCheckedChange={v => set('pageAccessOrders', v)}
+                            />
+                            <ToggleRow
+                                id="access-wallet"
+                                label="Wallet"
+                                description="Check balance and top up via Paystack"
+                                checked={form.pageAccessWallet}
+                                onCheckedChange={v => set('pageAccessWallet', v)}
+                            />
+                            <ToggleRow
+                                id="access-complaints"
+                                label="Complaints"
+                                description="Submit and track support complaints"
+                                checked={form.pageAccessComplaints}
+                                onCheckedChange={v => set('pageAccessComplaints', v)}
+                            />
+                            <ToggleRow
+                                id="access-notifications"
+                                label="Notifications"
+                                description="View system and account notifications"
+                                checked={form.pageAccessNotifications}
+                                onCheckedChange={v => set('pageAccessNotifications', v)}
+                            />
+                            <ToggleRow
+                                id="access-profile"
+                                label="Profile"
+                                description="View and edit account profile"
+                                checked={form.pageAccessProfile}
+                                onCheckedChange={v => set('pageAccessProfile', v)}
+                            />
                         </CardContent>
                     </Card>
                 </TabsContent>
