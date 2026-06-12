@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     const { data: keys, error } = await supabase
         .from('api_keys')
-        .select('*')
+        .select('id, name, key_preview, is_active, rate_limit_override, last_used_at, created_at')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
 

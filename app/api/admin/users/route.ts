@@ -66,7 +66,9 @@ export async function GET(request: NextRequest) {
         }
 
         if (search) {
-            query = query.or(`email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%,phone_number.ilike.%${search}%`)
+            // Strip characters that could escape the Supabase PostgREST filter syntax
+            const safeSearch = search.replace(/[%_,()]/g, '').substring(0, 100)
+            query = query.or(`email.ilike.%${safeSearch}%,first_name.ilike.%${safeSearch}%,last_name.ilike.%${safeSearch}%,phone_number.ilike.%${safeSearch}%`)
         }
 
         const fetchPromise = query

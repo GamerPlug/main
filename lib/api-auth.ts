@@ -1,4 +1,5 @@
 import { createServerClient } from './supabase'
+import { getRedis } from './rate-limit'
 import { crypto } from 'next/dist/compiled/@edge-runtime/primitives'
 
 export interface ApiAuthContext {
@@ -15,7 +16,7 @@ export interface ApiAuthContext {
  * 1. Extract Bearer token.
  * 2. Hash the token using SHA-256.
  * 3. Query the api_keys table for the hash.
- * 4. Verify the key is active and check rate limits.
+ * 4. Verify the key is active, check settlement flag, enforce rate limit via Redis.
  */
 export async function validateApiKey(request: Request): Promise<{ context: ApiAuthContext | null, error: string | null }> {
     const authHeader = request.headers.get('Authorization')
@@ -48,7 +49,8 @@ export async function validateApiKey(request: Request): Promise<{ context: ApiAu
             rate_limit_override,
             last_used_at,
             users (
-                role
+                role,
+                requires_settlement
             )
         `)
         .eq('key_hash', hashHex)
@@ -63,47 +65,41 @@ export async function validateApiKey(request: Request): Promise<{ context: ApiAu
     }
 
     // 3. User Restrictions (requires_settlement)
-    const requiresSettlement = (keyData.users as any)?.requires_settlement || false
+    const requiresSettlement = (keyData.users as any)?.requires_settlement === true
     const userRole = (keyData.users as any)?.role || 'user'
 
-    // 4. Rate Limiting (Requests Per Minute)
-    const now = new Date()
-    const limit = keyData.rate_limit_override || 60 // Default 60 RPM
-    
-    let currentCount = (keyData as any).requests_this_minute || 0
-    const lastReset = new Date((keyData as any).last_minute_timestamp || now)
-    
-    // Check if a minute has passed since the last reset
-    const secondsPassed = (now.getTime() - lastReset.getTime()) / 1000
-    
-    if (secondsPassed >= 60) {
-        // Reset the counter
-        currentCount = 1
-        await supabase
-            .from('api_keys')
-            .update({ 
-                requests_this_minute: 1, 
-                last_minute_timestamp: now.toISOString(),
-                last_used_at: now.toISOString() 
-            })
-            .eq('id', keyData.id)
-    } else if (currentCount >= limit) {
-        // Limit reached
-        return { 
-            context: null, 
-            error: `Rate limit exceeded. Your limit is ${limit} requests per minute. Try again in ${Math.ceil(60 - secondsPassed)} seconds.` 
+    // 4. Rate Limiting via Redis atomic fixed-window counter
+    const limit = keyData.rate_limit_override || 60
+    const windowMinute = Math.floor(Date.now() / 60000)
+    const windowKey = `gamerplug:api:rl:${keyData.id}:${windowMinute}`
+
+    try {
+        const redis = getRedis()
+        const pipe = redis.pipeline()
+        pipe.incr(windowKey)
+        pipe.expire(windowKey, 70) // 70s ensures cleanup after window ends
+        const results = await pipe.exec() as [number, number]
+        const count = results[0]
+
+        if (count > limit) {
+            const secsLeft = 60 - (Date.now() % 60000) / 1000
+            return {
+                context: null,
+                error: `Rate limit exceeded. Your limit is ${limit} requests per minute. Try again in ${Math.ceil(secsLeft)} seconds.`
+            }
         }
-    } else {
-        // Increment the counter
-        currentCount += 1
-        await supabase
-            .from('api_keys')
-            .update({ 
-                requests_this_minute: currentCount,
-                last_used_at: now.toISOString()
-            })
-            .eq('id', keyData.id)
+    } catch (redisErr) {
+        console.error('[api-auth] Redis rate limit error:', redisErr)
+        // Fail open with a log — prevents Redis outage from taking down the API
     }
+
+    // 5. Update last_used_at async (non-blocking)
+    supabase
+        .from('api_keys')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('id', keyData.id)
+        .then(() => {})
+        .catch(() => {})
 
     return {
         context: {

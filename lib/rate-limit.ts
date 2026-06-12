@@ -4,7 +4,7 @@ import { Redis } from '@upstash/redis'
 let _redis: Redis | null = null
 let _paymentRatelimit: Ratelimit | null = null
 
-function getRedis(): Redis {
+export function getRedis(): Redis {
     if (!_redis) {
         if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
             throw new Error('Upstash env vars not set (KV_REST_API_URL, KV_REST_API_TOKEN)')
