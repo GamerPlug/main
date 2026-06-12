@@ -40,8 +40,6 @@ import {
 import { toast } from 'sonner'
 import { Order, Complaint } from '@/types/supabase'
 import { format, differenceInHours } from 'date-fns'
-import { useTutorial } from '@/hooks/useTutorial'
-import { HelpButton } from '@/components/tutorial/HelpButton'
 
 interface OrderWithComplaints extends Order {
     complaints?: Complaint[]
@@ -61,8 +59,6 @@ export default function MyOrdersPage() {
     const { dbUser, isLoading: isAuthLoading } = useAuth()
     const [orders, setOrders] = useState<OrderWithComplaints[]>([])
 
-    const userRole = dbUser?.role === 'agent' ? 'agent' : 'user'
-    const { startTutorial } = useTutorial(userRole as 'user' | 'agent', '/orders')
     const [isLoading, setIsLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
     const [networkFilter, setNetworkFilter] = useState('All')
@@ -238,7 +234,6 @@ export default function MyOrdersPage() {
                     <p className="text-sm text-muted-foreground mt-0.5">Track and manage your data bundle orders</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <HelpButton onClick={startTutorial} />
                     <Link href="/dashboard/data-packages">
                         <Button size="sm" className="h-9 px-4 font-semibold gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
                             <Plus className="w-4 h-4" />

@@ -29,8 +29,6 @@ import {
 import { toast } from 'sonner'
 import { WalletTransaction } from '@/types/supabase'
 import { usePageAccess } from '@/hooks/use-page-access'
-import { useTutorial } from '@/hooks/useTutorial'
-import { HelpButton } from '@/components/tutorial/HelpButton'
 
 const QUICK_AMOUNTS = [50, 100, 200, 500]
 const MIN_AMOUNT = 5
@@ -53,9 +51,6 @@ function WalletContent() {
     const [paystackFeePercent, setPaystackFeePercent] = useState(1.95)
     const [isWalletTopupEnabled, setIsWalletTopupEnabled] = useState(true)
     const searchParams = useSearchParams()
-
-    const userRole = dbUser?.role === 'agent' ? 'agent' : 'user'
-    const { startTutorial } = useTutorial(userRole as 'user' | 'agent', '/wallet')
 
     const isWalletAccessible = isAdmin || isPageAccessible('/dashboard/wallet')
     const isAgent = dbUser?.role === 'agent'
@@ -271,7 +266,6 @@ function WalletContent() {
                     <h1 className="text-2xl font-bold text-foreground tracking-tight">My Wallet</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">Manage your balance and top up funds</p>
                 </div>
-                <HelpButton onClick={startTutorial} />
             </div>
 
             {/* Maintenance Banner — only rendered when top-ups are disabled */}
