@@ -94,12 +94,10 @@ export async function validateApiKey(request: Request): Promise<{ context: ApiAu
     }
 
     // 5. Update last_used_at async (non-blocking)
-    supabase
+    void supabase
         .from('api_keys')
         .update({ last_used_at: new Date().toISOString() })
         .eq('id', keyData.id)
-        .then(() => {})
-        .catch(() => {})
 
     return {
         context: {
