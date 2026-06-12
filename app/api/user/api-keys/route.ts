@@ -4,16 +4,24 @@ import { cookies } from 'next/headers'
 import { generateKey, hashKey } from '@/lib/api-auth'
 import { createServerClient } from '@/lib/supabase'
 
-export async function GET(request: NextRequest) {
+async function getSession() {
     const cookieStore = await cookies()
-    const supabase = createRouteHandlerClient({ 
+    const supabase = createRouteHandlerClient({
         // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
-        cookies: () => cookieStore 
+        cookies: () => cookieStore
     })
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { session }, error } = await supabase.auth.getSession()
+    return { session, error }
+}
 
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export async function GET(request: NextRequest) {
+    const { session, error: sessionError } = await getSession()
 
+    if (sessionError || !session?.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const supabase = createServerClient()
     const { data: keys, error } = await supabase
         .from('api_keys')
         .select('id, name, key_preview, is_active, rate_limit_override, last_used_at, created_at')
@@ -26,25 +34,28 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-    const cookieStore = await cookies()
-    const supabaseUserClient = createRouteHandlerClient({ 
-        // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
-        cookies: () => cookieStore 
-    })
-    const { data: { session } } = await supabaseUserClient.auth.getSession()
+    const { session, error: sessionError } = await getSession()
 
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (sessionError || !session?.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    const body = await request.json()
+    let body: any
+    try {
+        body = await request.json()
+    } catch {
+        return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
+
     const { name } = body
-
-    if (!name) return NextResponse.json({ error: 'Key name is required' }, { status: 400 })
+    if (!name || typeof name !== 'string' || !name.trim()) {
+        return NextResponse.json({ error: 'Key name is required' }, { status: 400 })
+    }
 
     const newKey = generateKey()
     const hashedKey = await hashKey(newKey)
     const preview = `${newKey.substring(0, 10)}...${newKey.substring(newKey.length - 4)}`
 
-    // Use service role to insert as RLS might be tricky for new keys depending on how it's set up
     const supabase = createServerClient()
     const { data: key, error } = await supabase
         .from('api_keys')
@@ -52,13 +63,16 @@ export async function POST(request: NextRequest) {
             user_id: session.user.id,
             key_hash: hashedKey,
             key_preview: preview,
-            name: name,
+            name: name.trim(),
             is_active: true
         })
-        .select()
+        .select('id, name, key_preview, is_active, rate_limit_override, last_used_at, created_at')
         .single()
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+        console.error('[api-keys POST] Insert error:', error.message)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+    }
 
     return NextResponse.json({
         ...key,
@@ -67,25 +81,23 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-    const cookieStore = await cookies()
-    const supabase = createRouteHandlerClient({ 
-        // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
-        cookies: () => cookieStore 
-    })
-    const { data: { session } } = await supabase.auth.getSession()
+    const { session, error: sessionError } = await getSession()
 
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (sessionError || !session?.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
     if (!id) return NextResponse.json({ error: 'Key ID is required' }, { status: 400 })
 
+    const supabase = createServerClient()
     const { error } = await supabase
         .from('api_keys')
         .delete()
         .eq('id', id)
-        .eq('user_id', session.user.id)
+        .eq('user_id', session.user.id) // scoped to owner — service role can delete any row
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
