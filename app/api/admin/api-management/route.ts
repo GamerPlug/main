@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    const { data: keys, error } = await supabase
+    const db = createServerClient()
+    const { data: keys, error } = await db
         .from('api_keys')
         .select(`
             *,
@@ -72,7 +73,8 @@ export async function PATCH(request: NextRequest) {
     if (typeof is_active === 'boolean') updateData.is_active = is_active
     if (typeof rate_limit_override === 'number') updateData.rate_limit_override = rate_limit_override
 
-    const { data: updatedKey, error } = await supabase
+    const db = createServerClient()
+    const { data: updatedKey, error } = await db
         .from('api_keys')
         .update(updateData)
         .eq('id', id)
@@ -110,7 +112,8 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) return NextResponse.json({ error: 'Key ID is required' }, { status: 400 })
 
-    const { error } = await supabase
+    const db = createServerClient()
+    const { error } = await db
         .from('api_keys')
         .delete()
         .eq('id', id)
