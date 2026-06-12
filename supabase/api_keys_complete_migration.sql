@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS public.api_keys (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     key_hash TEXT NOT NULL,
-    key_preview TEXT NOT NULL DEFAULT 'easy_live_...',
+    key_prefix TEXT NOT NULL DEFAULT 'easy_live_xxxxxxxxxx',
+    key_preview TEXT NOT NULL DEFAULT 'easy_live_xxxxxxxxxx...',
     name TEXT NOT NULL DEFAULT 'API Key',
     is_active BOOLEAN NOT NULL DEFAULT true,
     rate_limit_override INTEGER NOT NULL DEFAULT 60,
@@ -33,8 +34,12 @@ END$$;
 -- 3. Add each missing column individually (safe pattern)
 DO $$
 BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='api_keys' AND column_name='key_prefix') THEN
+        ALTER TABLE public.api_keys ADD COLUMN key_prefix TEXT NOT NULL DEFAULT 'easy_live_xxxxxxxxxx';
+    END IF;
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='api_keys' AND column_name='key_preview') THEN
-        ALTER TABLE public.api_keys ADD COLUMN key_preview TEXT NOT NULL DEFAULT 'easy_live_...';
+        ALTER TABLE public.api_keys ADD COLUMN key_preview TEXT NOT NULL DEFAULT 'easy_live_xxxxxxxxxx...';
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='api_keys' AND column_name='name') THEN

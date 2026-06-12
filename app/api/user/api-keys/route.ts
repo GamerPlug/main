@@ -54,7 +54,9 @@ export async function POST(request: NextRequest) {
 
     const newKey = generateKey()
     const hashedKey = await hashKey(newKey)
-    const preview = `${newKey.substring(0, 10)}...${newKey.substring(newKey.length - 4)}`
+    // key format: easy_live_<32chars>  →  prefix = first 20 chars
+    const prefix = newKey.substring(0, 20)
+    const preview = `${newKey.substring(0, 16)}...${newKey.substring(newKey.length - 4)}`
 
     const supabase = createServerClient()
     const { data: key, error } = await supabase
@@ -62,6 +64,7 @@ export async function POST(request: NextRequest) {
         .insert({
             user_id: session.user.id,
             key_hash: hashedKey,
+            key_prefix: prefix,
             key_preview: preview,
             name: name.trim(),
             is_active: true
