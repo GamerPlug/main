@@ -28,6 +28,8 @@ import {
 import { cn, formatDate } from '@/lib/utils'
 import { Separator } from '@/components/ui/separator'
 
+const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://gamerplug.com').replace(/\/$/, '')
+
 export default function DeveloperPage() {
     const [keys, setKeys] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -290,7 +292,7 @@ export default function DeveloperPage() {
                                     Use the following base URL for all v1 API calls:
                                 </p>
                                 <div className="bg-black/90 p-4 rounded-xl font-mono text-[11px] text-white shadow-2xl relative group/code overflow-x-auto mx-7">
-                                    <pre className="text-cyan-400">https://gamerplug.com/api/v1</pre>
+                                    <pre className="text-cyan-400">{BASE_URL}/api/v1</pre>
                                 </div>
                             </div>
 

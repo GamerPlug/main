@@ -26,6 +26,8 @@ import {
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
+const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://gamerplug.com').replace(/\/$/, '')
+
 const DOCS_CONTENT = [
     {
         id: 'auth',
@@ -34,9 +36,9 @@ const DOCS_CONTENT = [
         method: 'HEADER',
         endpoint: 'Authorization: Bearer <your_api_key>',
         details: 'API keys are managed in the Developer API section of your dashboard. Treat your API keys as passwords—keep them secret and never share them.',
-        curl: `curl -X GET "https://gamerplug.com/api/v1/user/balance" \\
+        curl: `curl -X GET "${BASE_URL}/api/v1/user/balance" \\
   -H "Authorization: Bearer easy_live_..."`,
-        javascript: `const response = await fetch('https://gamerplug.com/api/v1/user/balance', {
+        javascript: `const response = await fetch('${BASE_URL}/api/v1/user/balance', {
   headers: {
     'Authorization': 'Bearer easy_live_...'
   }
@@ -50,9 +52,9 @@ const data = await response.json();`
         method: 'GET',
         endpoint: '/user/balance',
         details: 'Returns your current wallet balance in GHS (Ghana Cedis).',
-        curl: `curl -X GET "https://gamerplug.com/api/v1/user/balance" \\
+        curl: `curl -X GET "${BASE_URL}/api/v1/user/balance" \\
   -H "Authorization: Bearer easy_live_..."`,
-        javascript: `fetch('https://gamerplug.com/api/v1/user/balance', {
+        javascript: `fetch('${BASE_URL}/api/v1/user/balance', {
   headers: {
     'Authorization': 'Bearer easy_live_...'
   }
@@ -74,9 +76,9 @@ const data = await response.json();`
         method: 'GET',
         endpoint: '/packages',
         details: 'The prices returned are automatically adjusted based on your user role (Agent, Dealer, etc.).',
-        curl: `curl -X GET "https://gamerplug.com/api/v1/packages" \\
+        curl: `curl -X GET "${BASE_URL}/api/v1/packages" \\
   -H "Authorization: Bearer easy_live_..."`,
-        javascript: `const res = await fetch('https://gamerplug.com/api/v1/packages', {
+        javascript: `const res = await fetch('${BASE_URL}/api/v1/packages', {
   headers: { 'Authorization': 'Bearer easy_live_...' }
 });
 const { packages } = await res.json();`,
@@ -101,7 +103,7 @@ const { packages } = await res.json();`,
         method: 'POST',
         endpoint: '/orders/purchase',
         details: 'Deducts from your wallet and triggers instant fulfillment. includes an optional idempotencyKey to prevent duplicate orders.',
-        curl: `curl -X POST "https://gamerplug.com/api/v1/orders/purchase" \\
+        curl: `curl -X POST "${BASE_URL}/api/v1/orders/purchase" \\
   -H "Authorization: Bearer easy_live_..." \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -109,7 +111,7 @@ const { packages } = await res.json();`,
     "phoneNumber": "0240000000",
     "idempotencyKey": "unique_string_123"
   }'`,
-        javascript: `await fetch('https://gamerplug.com/api/v1/orders/purchase', {
+        javascript: `await fetch('${BASE_URL}/api/v1/orders/purchase', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer easy_live_...',
@@ -142,9 +144,9 @@ const { packages } = await res.json();`,
         method: 'GET',
         endpoint: '/orders/status?reference=ED-XXXX',
         details: 'Search by internal orderId or the readable reference_code.',
-        curl: `curl -X GET "https://gamerplug.com/api/v1/orders/status?reference=ED-XXXX" \\
+        curl: `curl -X GET "${BASE_URL}/api/v1/orders/status?reference=ED-XXXX" \\
   -H "Authorization: Bearer easy_live_..."`,
-        javascript: `const res = await fetch('https://gamerplug.com/api/v1/orders/status?reference=ED-XXXX', {
+        javascript: `const res = await fetch('${BASE_URL}/api/v1/orders/status?reference=ED-XXXX', {
   headers: { 'Authorization': 'Bearer easy_live_...' }
 });`,
         response: `{

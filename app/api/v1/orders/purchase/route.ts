@@ -5,6 +5,7 @@ import { generateReferenceCode } from '@/lib/utils'
 import { validateGhanaianPhone } from '@/lib/phone-validation'
 import { sendOrderSuccessEmail, sendAdminNewOrderAlert } from '@/lib/email-service'
 import { sendOrderSuccessSMS, sendAdminAgentOrderAlert } from '@/lib/sms-service'
+import { fulfillIShareOrderWithTracking } from '@/lib/ishare-fulfillment'
 
 export async function POST(request: NextRequest) {
     try {
@@ -198,7 +199,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        triggerFulfillment((order as any).id, (pkg as any).network)
+        triggerFulfillment((order as any).id, (pkg as any).network, phoneNumber, (pkg as any).size, referenceCode, userId)
 
         return NextResponse.json({
             success: true,
@@ -236,6 +237,26 @@ async function updateUserPurchases(supabase: any, userId: string, phone: string,
     }
 }
 
-function triggerFulfillment(orderId: string, network: string) {
-    console.log(`[API] Triggering fulfillment for order ${orderId} on ${network}`)
+async function triggerFulfillment(
+    orderId: string,
+    network: string,
+    phone: string,
+    size: string,
+    referenceCode: string,
+    userId: string
+) {
+    if (network === 'AT-iShare') {
+        const supabase = createServerClient()
+        const { data: setting } = await (supabase
+            .from('admin_settings') as any)
+            .select('value')
+            .eq('key', 'ishare_auto_fulfillment_enabled')
+            .single()
+
+        if (setting?.value === 'true') {
+            fulfillIShareOrderWithTracking(orderId, phone, size, referenceCode, userId)
+                .catch((err) => console.error('[API v1 iShare] Auto-fulfill error:', err))
+        }
+    }
+    // MTN and CodeCraft networks are fulfilled via their respective cron jobs
 }
