@@ -126,7 +126,6 @@ export async function POST(request: NextRequest) {
                 phone_number: phoneNumber,
                 network: (pkg as any).network,
                 size: (pkg as any).size,
-                bundle_name: (pkg as any).size,
                 price: priceToCharge,
                 amount: priceToCharge,
                 cost_price: (pkg as any).cost_price || 0,
@@ -143,7 +142,7 @@ export async function POST(request: NextRequest) {
         if (orderError) {
             console.error('API Order creation error:', orderError)
             await supabase.rpc('refund_wallet', { p_user_id: userId, p_amount: priceToCharge })
-            return NextResponse.json({ error: 'Failed to create order. Wallet refunded.' }, { status: 500 })
+            return NextResponse.json({ error: 'Failed to create order. Wallet refunded.', _debug: orderError.message }, { status: 500 })
         }
 
         // 10. Record Transaction and Purchases

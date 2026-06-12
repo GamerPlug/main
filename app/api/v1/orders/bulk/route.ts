@@ -173,7 +173,6 @@ export async function POST(request: NextRequest) {
                 phone_number: item.phoneNumber,
                 network: pkg.network,
                 size: pkg.size,
-                bundle_name: pkg.size,
                 price,
                 amount: price,
                 cost_price: pkg.cost_price || 0,
@@ -193,9 +192,8 @@ export async function POST(request: NextRequest) {
 
         if (orderError) {
             console.error('[bulk] Order insert error:', orderError)
-            // Refund the full amount on failure
             await supabase.rpc('refund_wallet', { p_user_id: userId, p_amount: totalCost })
-            return NextResponse.json({ error: 'Failed to create orders. Wallet refunded.' }, { status: 500 })
+            return NextResponse.json({ error: 'Failed to create orders. Wallet refunded.', _debug: orderError.message }, { status: 500 })
         }
 
         // 9. Record wallet transactions
