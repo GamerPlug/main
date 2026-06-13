@@ -24,14 +24,13 @@ export default function GuestOrderStatusPage() {
 
     const fetchOrder = async () => {
         try {
+            // Scoped lookup: only returns the guest order matching this exact
+            // reference code (guest orders are no longer broadly readable).
             const { data, error } = await supabase
-                .from('orders')
-                .select('*')
-                .eq('reference_code', reference)
-                .single()
+                .rpc('get_guest_order_by_reference', { p_reference: reference })
 
             if (error) throw error
-            setOrder(data)
+            setOrder(Array.isArray(data) ? data[0] ?? null : data)
         } catch (error) {
             console.error('Fetch order error:', error)
         } finally {

@@ -4,6 +4,7 @@ import { Redis } from '@upstash/redis'
 let _redis: Redis | null = null
 let _paymentRatelimit: Ratelimit | null = null
 let _bulkOrderRatelimit: Ratelimit | null = null
+let _welcomeEmailRatelimit: Ratelimit | null = null
 
 export function getRedis(): Redis {
     if (!_redis) {
@@ -23,6 +24,20 @@ export function resetRatelimitSingletons() {
     _redis = null
     _paymentRatelimit = null
     _bulkOrderRatelimit = null
+    _welcomeEmailRatelimit = null
+}
+
+// 3 welcome-email/SMS sends per IP per 10 minutes (this endpoint is
+// unauthenticated by necessity — it fires right after signup)
+export function getWelcomeEmailRatelimit(): Ratelimit {
+    if (!_welcomeEmailRatelimit) {
+        _welcomeEmailRatelimit = new Ratelimit({
+            redis: getRedis(),
+            limiter: Ratelimit.slidingWindow(3, '10 m'),
+            prefix: 'gamerplug:welcome',
+        })
+    }
+    return _welcomeEmailRatelimit
 }
 
 // 10 payment init attempts per user per minute

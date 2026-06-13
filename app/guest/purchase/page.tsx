@@ -92,7 +92,8 @@ function GuestPurchaseContent() {
         try {
             const { data, error } = await supabase
                 .from('data_packages')
-                .select('*')
+                // Explicit columns — cost_price (admin margin) is intentionally excluded
+                .select('id, network, size, price, dealer_price, agent_price, is_available, sort_order, description, created_at')
                 .eq('is_available', true)
                 .order('sort_order', { ascending: true })
 
@@ -110,21 +111,12 @@ function GuestPurchaseContent() {
         setIsTracking(true)
         try {
             const phoneValidation = validateGhanaianPhone(ref)
-            let query = supabase.from('orders').select('*')
 
-            if (phoneValidation.isValid) {
-                // Tracking by phone number - get most recent guest order
-                query = query
-                    .eq('phone_number', phoneValidation.normalizedNumber)
-                    .is('user_id', null)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-            } else {
-                // Tracking by reference code
-                query = query.eq('reference_code', ref)
-            }
-
-            const { data, error } = await (phoneValidation.isValid ? query : query.single())
+            // Scoped lookups via SECURITY DEFINER RPCs — guest orders are no
+            // longer broadly readable; the caller must know the phone or ref.
+            const { data, error } = phoneValidation.isValid
+                ? await supabase.rpc('get_guest_orders_by_phone', { p_phone: phoneValidation.normalizedNumber })
+                : await supabase.rpc('get_guest_order_by_reference', { p_reference: ref })
 
             if (error) throw error
 
