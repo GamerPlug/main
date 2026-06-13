@@ -50,15 +50,29 @@ export async function GET(request: NextRequest) {
             return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/guest/purchase?ref=${reference}`)
         }
 
-        // 3. Mark as paid
-        await (supabase.from('orders') as any)
+        // 3. Atomically flip unpaid -> paid. The conditional guard ensures only
+        // ONE process (this callback OR the Paystack webhook) wins the race and
+        // proceeds to fulfillment, preventing duplicate data delivery.
+        const { data: claimedRows, error: claimError } = await (supabase.from('orders') as any)
             .update({
                 payment_status: 'paid',
                 updated_at: new Date().toISOString()
             })
             .eq('id', order.id)
+            .eq('payment_status', 'unpaid')
+            .select('id')
 
-        // 4. Trigger Fulfillment (Async)
+        if (claimError) {
+            console.error('[GuestVerify] Failed to mark order paid:', claimError)
+            return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/guest/purchase?ref=${reference}`)
+        }
+
+        // No row claimed => another process already paid+fulfilled this order.
+        if (!claimedRows || claimedRows.length === 0) {
+            return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/guest/purchase?ref=${reference}`)
+        }
+
+        // 4. Trigger Fulfillment (Async) — only the winner of the claim reaches here
         triggerGuestFulfillment(order.id, order.network, order.phone_number, order.size)
 
         // 5. Redirect to status tab

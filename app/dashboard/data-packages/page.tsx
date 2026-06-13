@@ -114,7 +114,8 @@ export default function DataPackagesPage() {
         try {
             const { data, error } = await supabase
                 .from('data_packages')
-                .select('*')
+                // Explicit columns — cost_price (admin margin) is intentionally excluded
+                .select('id, network, size, price, dealer_price, agent_price, is_available, sort_order, description, created_at')
                 .eq('is_available', true)
                 .order('sort_order', { ascending: true })
             if (error) throw error
