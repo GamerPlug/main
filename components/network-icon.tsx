@@ -15,7 +15,7 @@ export function NetworkIcon({ network, size = 40, className = '', variant = 'def
 
     // Standardize network name for file path
     const getFileName = (name: string) => {
-        if (name.includes('AT')) return 'at.png' // Both AT-iShare and AT-BigTime use AT logo
+        if (name.includes('AT')) return 'at.png' // AirtelTigo (AT-BigTime) uses the AT logo
         return `${name.toLowerCase()}.png`
     }
 

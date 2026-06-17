@@ -40,7 +40,6 @@ export function getNetworkColor(network: string): string {
     const colors: Record<string, string> = {
         'MTN': 'bg-yellow-500',
         'Telecel': 'bg-red-500',
-        'AT-iShare': 'bg-orange-500',
         'AT-BigTime': 'bg-orange-600',
     }
     return colors[network] || 'bg-gray-500'
@@ -50,7 +49,6 @@ export function getNetworkGradient(network: string): string {
     const gradients: Record<string, string> = {
         'MTN': 'from-yellow-400 to-yellow-600',
         'Telecel': 'from-red-500 to-red-700',
-        'AT-iShare': 'from-orange-400 to-red-500',
         'AT-BigTime': 'from-orange-500 to-red-600',
     }
     return gradients[network] || 'from-gray-400 to-gray-600'

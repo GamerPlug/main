@@ -24,8 +24,6 @@ import {
     Shield,
     Code2,
     Key,
-    Zap,
-    CreditCard,
 } from 'lucide-react'
 
 const workspaceNavItems = [
@@ -52,8 +50,6 @@ const adminNavItems = [
     { href: '/admin/sms-broadcast', label: 'SMS', icon: MessageSquare },
     { href: '/admin/profits-history', label: 'Profits', icon: Wallet },
     { href: '/admin/api-management', label: 'API Management', icon: Key },
-    { href: '/admin/ishare-logs', label: 'iShare Logs', icon: Zap },
-    { href: '/admin/payment-status', label: 'Payment Status', icon: CreditCard },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]
 

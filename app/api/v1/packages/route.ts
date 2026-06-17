@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateApiKey } from '@/lib/api-auth'
 import { createServerClient } from '@/lib/supabase'
+import { resolvePackagePrice, getUserPriceOverrides } from '@/lib/pricing'
 
 export async function GET(request: NextRequest) {
     // 1. Authenticate API Key
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
         }, { status: 403 })
     }
 
-    const { role } = context
+    const { role, userId } = context
 
     // 2. Fetch Packages
     const supabase = createServerClient()
@@ -30,20 +31,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to fetch packages' }, { status: 500 })
     }
 
-    // 3. Map Packages with prices based on role
+    // 3. Map Packages with prices (per-user override > role > base)
+    const priceOverrides = await getUserPriceOverrides(supabase, userId)
     const filteredPackages = packages.map((pkg: any) => {
-        let price = pkg.price
-        
-        switch (role) {
-            case 'dealer':
-                price = pkg.dealer_price || pkg.price
-                break
-            case 'agent':
-                price = pkg.agent_price || pkg.price
-                break
-            default:
-                price = pkg.price
-        }
+        const price = resolvePackagePrice(pkg, role, priceOverrides)
 
         return {
             id: pkg.id,

@@ -45,7 +45,7 @@ interface OrderWithComplaints extends Order {
     complaints?: Complaint[]
 }
 
-const NETWORKS = ['All', 'MTN', 'Telecel', 'AT-iShare', 'AT-BigTime']
+const NETWORKS = ['All', 'MTN', 'Telecel', 'AT-BigTime']
 const STATUSES = ['All', 'pending', 'processing', 'completed', 'failed']
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {

@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { DataPackage } from '@/types/supabase'
+import { resolvePackagePrice } from '@/lib/pricing'
 
 interface ValidationResult {
     lineNumber: number
@@ -28,7 +29,7 @@ interface ValidationResult {
     packageId?: string
 }
 
-type NetworkGroupId = 'MTN' | 'Telecel' | 'AT-iShare' | 'AT-BigTime'
+type NetworkGroupId = 'MTN' | 'Telecel' | 'AT-BigTime'
 type InputMode = 'text' | 'excel'
 
 interface NetworkGroup {
@@ -61,15 +62,6 @@ const NETWORK_GROUPS: NetworkGroup[] = [
         blobColor: 'rgba(230,0,0,0.12)',
     },
     {
-        id: 'AT-iShare',
-        label: 'AT iShare',
-        networks: ['AT-iShare'],
-        abbr: 'AT-iS',
-        iconBg: '#0056B3',
-        iconText: '#fff',
-        blobColor: 'rgba(0,86,179,0.14)',
-    },
-    {
         id: 'AT-BigTime',
         label: 'AT BigTime',
         networks: ['AT-BigTime'],
@@ -86,6 +78,8 @@ export default function DataPackagesPage() {
     const { dbUser, session } = useAuth()
 
     const [packages, setPackages] = useState<DataPackage[]>([])
+    // Per-user custom price overrides: packageId -> custom_price
+    const [priceOverrides, setPriceOverrides] = useState<Map<string, number>>(new Map())
     const [selectedGroup, setSelectedGroup] = useState<NetworkGroupId>('MTN')
     const [walletBalance, setWalletBalance] = useState(0)
     const [creditLimit, setCreditLimit] = useState(0)
@@ -105,7 +99,12 @@ export default function DataPackagesPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     useEffect(() => { fetchPackages() }, [])
-    useEffect(() => { if (dbUser) fetchWalletBalance() }, [dbUser])
+    useEffect(() => {
+        if (dbUser) {
+            fetchWalletBalance()
+            fetchPriceOverrides()
+        }
+    }, [dbUser])
 
     // Clear results whenever input changes to prevent stale submissions
     useEffect(() => { setValidationResults([]) }, [selectedGroup, bulkText, excelFile, inputMode])
@@ -141,11 +140,23 @@ export default function DataPackagesPage() {
         }
     }
 
+    // Load this user's custom price overrides (RLS restricts to own rows)
+    const fetchPriceOverrides = async () => {
+        if (!dbUser) return
+        const { data } = await (supabase
+            .from('user_package_pricing') as any)
+            .select('package_id, custom_price')
+            .eq('user_id', dbUser.id)
+        const map = new Map<string, number>()
+        for (const row of (data || [])) {
+            map.set(row.package_id, Number(row.custom_price))
+        }
+        setPriceOverrides(map)
+    }
+
     const getEffectivePrice = (pkg: DataPackage) => {
         const role = dbUser?.role || 'agent'
-        if (role === 'dealer' && pkg.dealer_price && pkg.dealer_price > 0) return pkg.dealer_price
-        if (role === 'agent' && pkg.agent_price && pkg.agent_price > 0) return pkg.agent_price
-        return pkg.price
+        return resolvePackagePrice(pkg, role, priceOverrides)
     }
 
     const getGroupInfo = (groupId: NetworkGroupId) => {
@@ -206,7 +217,7 @@ export default function DataPackagesPage() {
     const validateEntries = (entries: { lineNumber: number; phoneNumber: string; volume: number }[]): ValidationResult[] => {
         const group = NETWORK_GROUPS.find(g => g.id === selectedGroup)!
         const groupNetworks = group.networks
-        const targetNet = (selectedGroup === 'AT-iShare' || selectedGroup === 'AT-BigTime')
+        const targetNet = selectedGroup === 'AT-BigTime'
             ? 'AirtelTigo'
             : selectedGroup
 

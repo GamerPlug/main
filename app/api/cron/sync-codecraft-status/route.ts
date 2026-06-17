@@ -13,11 +13,11 @@ export async function GET(request: NextRequest) {
     const supabase = createServerClient()
 
     try {
-        // Get pending/processing orders for Telecel, AT-iShare, AT-BigTime
+        // Get pending/processing orders for CodeCraft networks (Telecel, AT-BigTime)
         const { data: orders, error } = await supabase
             .from('orders')
             .select('*, fulfillment_logs(*)')
-            .in('network', ['Telecel', 'AT-iShare', 'AT-BigTime'])
+            .in('network', ['Telecel', 'AT-BigTime'])
             .in('status', ['pending', 'processing'])
             .not('codecraft_reference', 'is', null)
             .limit(50)

@@ -1,4 +1,4 @@
-// CodeCraft API Service for AT-iShare, Telecel, AT-BigTime fulfillment
+// CodeCraft API Service for Telecel and AT-BigTime fulfillment
 
 const CODECRAFT_API_URL = process.env.CODECRAFT_API_URL || 'https://api.codecraftnetwork.com/api'
 const CODECRAFT_API_KEY = process.env.CODECRAFT_API_KEY || ''
@@ -175,7 +175,6 @@ export async function fulfillOrder(
     // Map network names to CodeCraft format
     const networkMap: Record<string, string> = {
         'Telecel': 'telecel',
-        'AT-iShare': 'airteltigo',
     }
 
     const codecraftNetwork = networkMap[network] || network.toLowerCase()

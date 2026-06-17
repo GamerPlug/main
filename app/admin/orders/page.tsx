@@ -87,18 +87,6 @@ export default function AdminOrdersPage() {
     const [lastDownloadTime, setLastDownloadTime] = useState(0)
     const DOWNLOAD_COOLDOWN = 3000 // 3 seconds cooldown
 
-    // iShare auto-fulfillment setting — when ON, iShare orders are hidden from manual download
-    const [ishareAutoFulfillEnabled, setIshareAutoFulfillEnabled] = useState(false)
-    useEffect(() => {
-        ;(supabase.from('admin_settings') as any)
-            .select('value')
-            .eq('key', 'ishare_auto_fulfillment_enabled')
-            .single()
-            .then(({ data }: any) => {
-                if (data) setIshareAutoFulfillEnabled(data.value === 'true')
-            })
-    }, [])
-
     // Debounce search term
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -953,12 +941,9 @@ export default function AdminOrdersPage() {
 
             const matchesNetwork = availableNetworkFilter === 'all' || order.network === availableNetworkFilter
 
-            // Hide AT-iShare orders from manual download when auto-fulfillment is enabled
-            const notAutoFulfilledIShare = !(ishareAutoFulfillEnabled && order.network === 'AT-iShare')
-
-            return matchesSearch && matchesNetwork && notAutoFulfilledIShare
+            return matchesSearch && matchesNetwork
         })
-    }, [orders, debouncedSearch, availableNetworkFilter, ishareAutoFulfillEnabled])
+    }, [orders, debouncedSearch, availableNetworkFilter])
 
     const filteredBatches = useMemo(() => {
         // Most filtering now happens on server.
@@ -1042,7 +1027,7 @@ export default function AdminOrdersPage() {
                                     />
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
-                                    {['All', 'MTN', 'Telecel', 'AT-iShare', 'AT-BigTime'].map((network) => (
+                                    {['All', 'MTN', 'Telecel', 'AT-BigTime'].map((network) => (
                                         <Button
                                             key={network}
                                             variant={availableNetworkFilter === (network === 'All' ? 'all' : network) ? 'default' : 'outline'}
@@ -1053,7 +1038,7 @@ export default function AdminOrdersPage() {
                                                     ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
                                                     : network === 'Telecel'
                                                         ? 'bg-red-600 hover:bg-red-700 text-white'
-                                                        : network === 'AT-iShare' || network === 'AT-BigTime'
+                                                        : network === 'AT-BigTime'
                                                             ? 'bg-blue-600 hover:bg-blue-700 text-white'
                                                             : 'bg-primary text-primary-foreground'
                                                 : 'hover:bg-muted'
@@ -1171,7 +1156,7 @@ export default function AdminOrdersPage() {
                             />
                         </div>
                         <div className="flex flex-wrap gap-1.5 pt-1">
-                            {['All', 'MTN', 'Telecel', 'AT-iShare', 'AT-BigTime'].map((network) => (
+                            {['All', 'MTN', 'Telecel', 'AT-BigTime'].map((network) => (
                                 <Button
                                     key={network}
                                     id={`network-filter-${network.toLowerCase()}`}
@@ -1184,7 +1169,7 @@ export default function AdminOrdersPage() {
                                             ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
                                             : network === 'Telecel'
                                                 ? 'bg-red-600 hover:bg-red-700 text-white'
-                                                : network === 'AT-iShare' || network === 'AT-BigTime'
+                                                : network === 'AT-BigTime'
                                                     ? 'bg-blue-600 hover:bg-blue-700 text-white'
                                                     : 'bg-primary text-primary-foreground'
                                         : 'hover:bg-muted'

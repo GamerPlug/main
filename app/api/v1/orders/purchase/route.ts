@@ -5,7 +5,7 @@ import { generateReferenceCode } from '@/lib/utils'
 import { validateGhanaianPhone } from '@/lib/phone-validation'
 import { sendOrderSuccessEmail, sendAdminNewOrderAlert } from '@/lib/email-service'
 import { sendOrderSuccessSMS, sendAdminAgentOrderAlert } from '@/lib/sms-service'
-import { fulfillIShareOrderWithTracking } from '@/lib/ishare-fulfillment'
+import { resolvePackagePrice, getUserPriceOverrides } from '@/lib/pricing'
 
 export async function POST(request: NextRequest) {
     try {
@@ -97,10 +97,9 @@ export async function POST(request: NextRequest) {
             .eq('id', userId)
             .single()
 
-        // 7. Determine Price
-        let priceToCharge = (pkg as any).price
-        if (role === 'dealer' && (pkg as any).dealer_price > 0) priceToCharge = (pkg as any).dealer_price
-        else if (role === 'agent' && (pkg as any).agent_price > 0) priceToCharge = (pkg as any).agent_price
+        // 7. Determine Price (per-user override > role > base)
+        const priceOverrides = await getUserPriceOverrides(supabase, userId, [packageId])
+        const priceToCharge = resolvePackagePrice(pkg as any, role, priceOverrides)
 
         // 8. Atomic Wallet Deduction
         const { data: deductResult, error: deductError } = await supabase.rpc('deduct_wallet', {
@@ -198,7 +197,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        triggerFulfillment((order as any).id, (pkg as any).network, phoneNumber, (pkg as any).size, referenceCode, userId)
+        // MTN and other networks are fulfilled via their respective cron jobs.
 
         return NextResponse.json({
             success: true,
@@ -234,28 +233,4 @@ async function updateUserPurchases(supabase: any, userId: string, phone: string,
             first_purchase_at: new Date().toISOString(), last_purchase_at: new Date().toISOString(),
         })
     }
-}
-
-async function triggerFulfillment(
-    orderId: string,
-    network: string,
-    phone: string,
-    size: string,
-    referenceCode: string,
-    userId: string
-) {
-    if (network === 'AT-iShare') {
-        const supabase = createServerClient()
-        const { data: setting } = await (supabase
-            .from('admin_settings') as any)
-            .select('value')
-            .eq('key', 'ishare_auto_fulfillment_enabled')
-            .single()
-
-        if (setting?.value === 'true') {
-            fulfillIShareOrderWithTracking(orderId, phone, size, referenceCode, userId)
-                .catch((err) => console.error('[API v1 iShare] Auto-fulfill error:', err))
-        }
-    }
-    // MTN and CodeCraft networks are fulfilled via their respective cron jobs
 }

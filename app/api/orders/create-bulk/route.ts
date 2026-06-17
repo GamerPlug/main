@@ -6,7 +6,7 @@ import { cookies } from 'next/headers'
 import { sendAdminNewOrderAlert } from '@/lib/email-service'
 import { sendOrderSuccessSMS, sendAdminAgentOrderAlert } from '@/lib/sms-service'
 import { validateGhanaianPhone } from '@/lib/phone-validation'
-import { fulfillIShareOrderWithTracking } from '@/lib/ishare-fulfillment'
+import { resolvePackagePrice, getUserPriceOverrides } from '@/lib/pricing'
 
 interface BulkOrderItem {
     packageId: string
@@ -111,6 +111,9 @@ export async function POST(request: NextRequest) {
 
         const packageMap = new Map((packagesData || []).map(p => [(p as any).id, p]))
 
+        // Per-user custom price overrides (apply regardless of role)
+        const priceOverrides = await getUserPriceOverrides(supabase, userId, uniquePackageIds)
+
         // Normalize and validate phones server-side, then batch-check blacklist
         const normalizedPhones = new Map<string, string>() // raw → normalized
         for (const order of orders) {
@@ -199,12 +202,7 @@ export async function POST(request: NextRequest) {
                 continue
             }
 
-            let price = (pkg as any).price
-            if (userRole === 'dealer' && (pkg as any).dealer_price > 0) {
-                price = (pkg as any).dealer_price
-            } else if (userRole === 'agent' && (pkg as any).agent_price > 0) {
-                price = (pkg as any).agent_price
-            }
+            const price = resolvePackagePrice(pkg as any, userRole, priceOverrides)
 
             const referenceCode = generateReferenceCode()
             validatedOrders.push({ order: { ...order, phoneNumber: normalizedPhone }, pkg, price, referenceCode })
@@ -400,19 +398,7 @@ export async function POST(request: NextRequest) {
             console.error('[BulkOrder] Notification error:', notifyError)
         }
 
-        // Trigger auto-fulfillment for AT-iShare orders
-        for (let i = 0; i < insertedOrders.length; i++) {
-            const insertedOrder = insertedOrders[i]
-            const vo = validatedOrders[i]
-            triggerFulfillment(
-                (insertedOrder as any).id,
-                (insertedOrder as any).network,
-                vo.order.phoneNumber,
-                (vo.pkg as any).size,
-                vo.referenceCode,
-                userId
-            )
-        }
+        // MTN and other networks are fulfilled via their respective cron jobs.
 
         return NextResponse.json({
             success: true,
@@ -430,28 +416,4 @@ export async function POST(request: NextRequest) {
         console.error('Bulk purchase error:', error)
         return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 })
     }
-}
-
-async function triggerFulfillment(
-    orderId: string,
-    network: string,
-    phone: string,
-    size: string,
-    referenceCode: string,
-    userId: string
-) {
-    if (network === 'AT-iShare') {
-        const supabase = createServerClient()
-        const { data: setting } = await (supabase
-            .from('admin_settings') as any)
-            .select('value')
-            .eq('key', 'ishare_auto_fulfillment_enabled')
-            .single()
-
-        if (setting?.value === 'true') {
-            fulfillIShareOrderWithTracking(orderId, phone, size, referenceCode, userId)
-                .catch((err: Error) => console.error('[BulkOrder] iShare auto-fulfill error:', err))
-        }
-    }
-    // MTN and other networks rely on cron jobs
 }

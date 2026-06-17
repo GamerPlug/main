@@ -4,7 +4,7 @@ import { createServerClient } from '@/lib/supabase'
 import { generateReferenceCode } from '@/lib/utils'
 import { validateGhanaianPhone } from '@/lib/phone-validation'
 import { getBulkOrderRatelimit } from '@/lib/rate-limit'
-import { fulfillIShareOrderWithTracking } from '@/lib/ishare-fulfillment'
+import { resolvePackagePrice, getUserPriceOverrides } from '@/lib/pricing'
 
 const MAX_BULK_SIZE = 100
 
@@ -121,6 +121,9 @@ export async function POST(request: NextRequest) {
 
         const pkgMap = new Map(packages.map((p: any) => [p.id, p]))
 
+        // Per-user custom price overrides (apply regardless of role)
+        const priceOverrides = await getUserPriceOverrides(supabase, userId, packageIds)
+
         // Verify all packages exist
         for (let i = 0; i < validatedItems.length; i++) {
             if (!pkgMap.has(validatedItems[i].packageId)) {
@@ -134,10 +137,7 @@ export async function POST(request: NextRequest) {
         let totalCost = 0
         for (const item of validatedItems) {
             const pkg = pkgMap.get(item.packageId) as any
-            let price = pkg.price
-            if (role === 'dealer' && pkg.dealer_price > 0) price = pkg.dealer_price
-            else if (role === 'agent' && pkg.agent_price > 0) price = pkg.agent_price
-            totalCost += price
+            totalCost += resolvePackagePrice(pkg, role, priceOverrides)
         }
 
         // 7. Single atomic wallet deduction for total
@@ -160,9 +160,7 @@ export async function POST(request: NextRequest) {
 
         for (const item of validatedItems) {
             const pkg = pkgMap.get(item.packageId) as any
-            let price = pkg.price
-            if (role === 'dealer' && pkg.dealer_price > 0) price = pkg.dealer_price
-            else if (role === 'agent' && pkg.agent_price > 0) price = pkg.agent_price
+            const price = resolvePackagePrice(pkg, role, priceOverrides)
 
             const refCode = generateReferenceCode()
             refCodes.push(refCode)
@@ -210,21 +208,7 @@ export async function POST(request: NextRequest) {
 
         await (supabase.from('wallet_transactions') as any).insert(txInserts)
 
-        // 10. Trigger fulfillment for each order (async, non-blocking)
-        for (const order of createdOrders as any[]) {
-            if (order.network === 'AT-iShare') {
-                const setting = await (supabase
-                    .from('admin_settings') as any)
-                    .select('value')
-                    .eq('key', 'ishare_auto_fulfillment_enabled')
-                    .single()
-
-                if (setting?.data?.value === 'true') {
-                    fulfillIShareOrderWithTracking(order.id, order.phone_number, order.size, order.reference_code, userId)
-                        .catch((err: any) => console.error('[bulk iShare] Fulfill error:', err))
-                }
-            }
-        }
+        // MTN and other networks are fulfilled via their respective cron jobs.
 
         return NextResponse.json({
             success: true,

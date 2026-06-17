@@ -4,7 +4,6 @@ import { processCompletedWalletPayment } from '@/lib/payments'
 import { createServerClient } from '@/lib/supabase'
 import { fulfillMTNOrder } from '@/lib/mtn-fulfillment'
 import { fulfillOrder as fulfillOtherOrder } from '@/lib/at-ishare-service'
-import { fulfillIShareOrderWithTracking } from '@/lib/ishare-fulfillment'
 
 export async function POST(request: NextRequest) {
     try {
@@ -155,21 +154,6 @@ async function triggerGuestFulfillment(
     const supabase = createServerClient()
 
     try {
-        // AT-iShare: use SPFastIT API when auto-fulfillment is enabled
-        if (network === 'AT-iShare') {
-            const { data: setting } = await (supabase
-                .from('admin_settings') as any)
-                .select('value')
-                .eq('key', 'ishare_auto_fulfillment_enabled')
-                .single()
-
-            if (setting?.value === 'true') {
-                await fulfillIShareOrderWithTracking(orderId, phoneNumber, size, referenceCode, null)
-                return
-            }
-            // Fall through to CodeCraft if setting is off
-        }
-
         let result;
         if (network === 'MTN') {
             result = await fulfillMTNOrder(phoneNumber, size, orderId)

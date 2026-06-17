@@ -90,7 +90,7 @@ export interface Wallet {
 
 export interface DataPackage {
     id: string
-    network: 'MTN' | 'Telecel' | 'AT-iShare' | 'AT-BigTime'
+    network: 'MTN' | 'Telecel' | 'AT-BigTime'
     size: string
     price: number
     dealer_price?: number
@@ -100,6 +100,17 @@ export interface DataPackage {
     is_available: boolean
     sort_order: number
     created_at: string
+}
+
+export interface UserPackagePricing {
+    id: string
+    user_id: string
+    package_id: string
+    custom_price: number
+    note?: string
+    created_by?: string
+    created_at: string
+    updated_at: string
 }
 
 export interface Order {

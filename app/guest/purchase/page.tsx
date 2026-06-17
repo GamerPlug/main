@@ -32,7 +32,7 @@ import { toast } from 'sonner'
 import Image from 'next/image'
 import { MobileMenu } from '@/components/public/mobile-menu'
 
-const NETWORKS = ['MTN', 'Telecel', 'AT-iShare', 'AT-BigTime'] as const
+const NETWORKS = ['MTN', 'Telecel', 'AT-BigTime'] as const
 
 function GuestPurchaseContent() {
     const searchParams = useSearchParams()
