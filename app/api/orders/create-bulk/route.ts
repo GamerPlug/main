@@ -7,6 +7,7 @@ import { sendAdminNewOrderAlert } from '@/lib/email-service'
 import { sendOrderSuccessSMS, sendAdminAgentOrderAlert } from '@/lib/sms-service'
 import { validateGhanaianPhone } from '@/lib/phone-validation'
 import { resolvePackagePrice, getUserPriceOverrides } from '@/lib/pricing'
+import { notifyAdmins, adminNewOrderNotification } from '@/lib/notification-service'
 
 interface BulkOrderItem {
     packageId: string
@@ -384,6 +385,29 @@ export async function POST(request: NextRequest) {
                 userName: `${firstName} ${lastName}`.trim(),
                 userEmail,
             }).catch((err: Error) => console.error('[BulkOrder] Admin email error:', err))
+
+            // Admin in-app + push alert. Awaited so it reliably persists in a
+            // serverless function (fire-and-forget can be cut off after response).
+            // Detailed for a single order, summarized for a bulk purchase.
+            if (validatedOrders.length === 1) {
+                const vo = validatedOrders[0]
+                await notifyAdmins(adminNewOrderNotification({
+                    orderRef: vo.referenceCode,
+                    network: (vo.pkg as any).network,
+                    size: (vo.pkg as any).size,
+                    amount: vo.price,
+                    phone: vo.order.phoneNumber,
+                }))
+            } else {
+                await notifyAdmins({
+                    title: 'New Bulk Order',
+                    message: `${`${firstName} ${lastName}`.trim() || 'A user'} placed ${validatedOrders.length} orders (GHS ${totalCost.toFixed(2)}).`,
+                    type: 'admin_new_order',
+                    actionUrl: '/admin/orders',
+                    metadata: { count: validatedOrders.length, total: totalCost },
+                    dedupeKey: `admin_new_order_bulk:${validatedOrders[0].referenceCode}`,
+                })
+            }
 
             if (accountHolderPhone) {
                 sendOrderSuccessSMS(accountHolderPhone, {
