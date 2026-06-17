@@ -231,6 +231,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, [fetchDbUser]) // Only depend on fetchDbUser which is memoized
 
+    // 1b. Re-sync the user (role/status/wallet) whenever the app returns to the
+    // foreground or is restored from the back-forward cache. On Android a tab can
+    // be frozen and restored without re-running init, and its realtime websocket
+    // is suspended while backgrounded — so a role change made in the meantime
+    // would otherwise stay stale until a full reload.
+    useEffect(() => {
+        const userId = user?.id
+        if (!userId) return
+
+        const resync = () => {
+            if (document.visibilityState === 'visible') fetchDbUser(userId)
+        }
+        const onPageShow = (e: PageTransitionEvent) => {
+            if (e.persisted) fetchDbUser(userId)
+        }
+
+        document.addEventListener('visibilitychange', resync)
+        window.addEventListener('pageshow', onPageShow)
+        return () => {
+            document.removeEventListener('visibilitychange', resync)
+            window.removeEventListener('pageshow', onPageShow)
+        }
+    }, [user?.id, fetchDbUser])
+
     // 2. Realtime subscription for user status/wallet updates (Depends on user identity)
     useEffect(() => {
         let userChannel: any;
