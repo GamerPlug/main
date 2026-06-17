@@ -233,8 +233,8 @@ export default function NotificationsPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Notifications</h1>
-                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Notifications</h1>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
                         {unreadCount > 0 ? (
                             <span className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
@@ -247,7 +247,7 @@ export default function NotificationsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                     <Link href="/dashboard/notifications/preferences">
-                        <Button variant="outline" size="sm" className="rounded-xl font-bold text-xs h-10 px-3">
+                        <Button variant="outline" size="sm" className="rounded-xl font-medium text-xs h-10 px-3">
                             <SlidersHorizontal className="w-4 h-4 sm:mr-2" />
                             <span className="hidden sm:inline">Settings</span>
                         </Button>
@@ -258,7 +258,7 @@ export default function NotificationsPage() {
                             size="sm"
                             onClick={markAllAsRead}
                             disabled={markingAllRead}
-                            className="rounded-xl font-bold text-xs h-10 px-3"
+                            className="rounded-xl font-medium text-xs h-10 px-3"
                         >
                             {markingAllRead ? <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" /> : <Check className="w-4 h-4 sm:mr-2 text-primary" />}
                             <span className="hidden sm:inline">Mark all read</span>
@@ -270,7 +270,7 @@ export default function NotificationsPage() {
                             size="sm"
                             onClick={deleteAllNotifications}
                             disabled={deletingAll}
-                            className="bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400 hover:text-white hover:bg-rose-500 hover:border-rose-500 rounded-xl font-bold text-xs h-10 px-3 transition-all"
+                            className="bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400 hover:text-white hover:bg-rose-500 hover:border-rose-500 rounded-xl font-medium text-xs h-10 px-3 transition-all"
                         >
                             {deletingAll ? <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" /> : <Trash className="w-4 h-4 sm:mr-2" />}
                             <span className="hidden sm:inline">Delete all</span>
@@ -287,15 +287,15 @@ export default function NotificationsPage() {
                             <BellRing className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                            <p className="text-sm font-black text-foreground">Turn on push notifications</p>
+                            <p className="text-sm font-semibold text-foreground">Turn on push notifications</p>
                             <p className="text-xs font-medium text-foreground/55">Get instant alerts even when the app is closed.</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-1.5">
-                        <Button size="sm" onClick={enablePush} disabled={isBusy} className="rounded-xl font-bold text-xs h-9">
+                        <Button size="sm" onClick={enablePush} disabled={isBusy} className="rounded-xl font-medium text-xs h-9">
                             {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enable'}
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setShowPushCard(false)} className="rounded-xl font-bold text-xs h-9 text-foreground/50">
+                        <Button size="sm" variant="ghost" onClick={() => setShowPushCard(false)} className="rounded-xl font-medium text-xs h-9 text-foreground/50">
                             Later
                         </Button>
                     </div>
@@ -308,9 +308,9 @@ export default function NotificationsPage() {
                     <button
                         key={chip.key}
                         onClick={() => setFilter(chip.key)}
-                        className={`whitespace-nowrap rounded-xl text-xs font-bold px-4 h-9 transition-all border ${
+                        className={`whitespace-nowrap rounded-lg text-xs font-medium px-3.5 h-8 transition-all border ${
                             filter === chip.key
-                                ? 'gradient-primary text-white shadow-lg border-transparent'
+                                ? 'bg-primary text-white border-transparent shadow-sm'
                                 : 'bg-slate-50/50 dark:bg-black/40 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border-slate-200 dark:border-white/10'
                         }`}
                     >
@@ -326,7 +326,7 @@ export default function NotificationsPage() {
                     <div className="w-20 h-20 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center mb-6">
                         <Bell className="w-10 h-10 text-slate-400 dark:text-slate-500" />
                     </div>
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">No Notifications</h3>
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Notifications</h3>
                     <p className="text-slate-500 dark:text-slate-400">
                         {filter === 'all' ? "You don't have any notifications yet." : 'Nothing here for this filter.'}
                     </p>
@@ -335,7 +335,7 @@ export default function NotificationsPage() {
                 <div className="space-y-6">
                     {groups.map((group) => (
                         <div key={group.label} className="space-y-3">
-                            <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 px-1">{group.label}</p>
+                            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 px-1">{group.label}</p>
                             {group.items.map((notification) => (
                                 <div
                                     key={notification.id}
@@ -348,24 +348,24 @@ export default function NotificationsPage() {
                                     {!notification.is_read && (
                                         <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary to-indigo-500" />
                                     )}
-                                    <div className="flex items-start gap-4 pl-2">
+                                    <div className="flex items-start gap-3 sm:gap-4 pl-1 sm:pl-2">
                                         <div
-                                            className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 border ${
+                                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 border ${
                                                 !notification.is_read
                                                     ? 'bg-primary/10 dark:bg-primary/20 border-primary/20 dark:border-primary/30'
                                                     : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5'
                                             }`}
                                         >
-                                            <NotificationIcon type={notification.type} className="w-5 h-5" />
+                                            <NotificationIcon type={notification.type} className="w-[18px] h-[18px]" />
                                         </div>
                                         <button onClick={() => openNotification(notification)} className="flex-1 min-w-0 text-left">
-                                            <h3 className={`text-base font-black tracking-tight ${!notification.is_read ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-300'}`}>
+                                            <h3 className={`text-sm sm:text-[15px] font-semibold tracking-tight ${!notification.is_read ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-300'}`}>
                                                 {notification.title}
                                             </h3>
-                                            <p className={`text-sm font-medium leading-relaxed mt-0.5 ${!notification.is_read ? 'text-slate-600 dark:text-slate-400' : 'text-slate-500 dark:text-slate-500'}`}>
+                                            <p className={`text-[13px] sm:text-sm font-normal leading-relaxed mt-0.5 break-words ${!notification.is_read ? 'text-slate-600 dark:text-slate-400' : 'text-slate-500 dark:text-slate-500'}`}>
                                                 {notification.message}
                                             </p>
-                                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest pt-1.5">
+                                            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 pt-1.5">
                                                 {formatRelativeTime(notification.created_at)}
                                             </p>
                                         </button>
@@ -403,7 +403,7 @@ export default function NotificationsPage() {
                                 variant="outline"
                                 onClick={loadMore}
                                 disabled={loadingMore}
-                                className="rounded-xl font-bold text-xs h-10 px-6"
+                                className="rounded-xl font-medium text-xs h-10 px-6"
                             >
                                 {loadingMore ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ChevronDown className="w-4 h-4 mr-2" />}
                                 Load more

@@ -196,7 +196,7 @@ export function DashboardHeader() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-[22rem] glass-card border-white/10 mt-2 p-0 overflow-hidden" align="end" forceMount>
                             <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
-                                <p className="text-sm font-black text-foreground">
+                                <p className="text-sm font-semibold text-foreground">
                                     Notifications {unreadCount > 0 && <span className="text-primary">({unreadCount})</span>}
                                 </p>
                                 <div className="flex items-center gap-1">
@@ -242,11 +242,11 @@ export function DashboardHeader() {
                                                 <NotificationIcon type={n.type} className="w-4 h-4" />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className={cn('text-[13px] leading-snug truncate', !n.is_read ? 'font-bold text-foreground' : 'font-semibold text-foreground/80')}>
+                                                <p className={cn('text-[13px] leading-snug truncate', !n.is_read ? 'font-semibold text-foreground' : 'font-medium text-foreground/80')}>
                                                     {n.title}
                                                 </p>
                                                 <p className="text-xs text-foreground/55 line-clamp-2 leading-snug mt-0.5">{n.message}</p>
-                                                <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/35 mt-1">{formatRelativeTime(n.created_at)}</p>
+                                                <p className="text-[10px] font-medium text-foreground/35 mt-1">{formatRelativeTime(n.created_at)}</p>
                                             </div>
                                             {!n.is_read && <span className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />}
                                         </button>
@@ -255,7 +255,7 @@ export function DashboardHeader() {
                             </div>
 
                             <Link href="/dashboard/notifications" className="block">
-                                <div className="px-4 py-3 text-center text-xs font-bold text-primary hover:bg-muted/60 transition-colors flex items-center justify-center gap-1.5">
+                                <div className="px-4 py-3 text-center text-xs font-medium text-primary hover:bg-muted/60 transition-colors flex items-center justify-center gap-1.5">
                                     See all notifications <ArrowRight className="w-3.5 h-3.5" />
                                 </div>
                             </Link>
