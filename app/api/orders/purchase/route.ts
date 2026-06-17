@@ -7,6 +7,7 @@ import { sendOrderSuccessEmail, sendAdminNewOrderAlert } from '@/lib/email-servi
 import { sendOrderSuccessSMS, sendAdminAgentOrderAlert } from '@/lib/sms-service'
 import { validateGhanaianPhone } from '@/lib/phone-validation'
 import { fulfillIShareOrderWithTracking } from '@/lib/ishare-fulfillment'
+import { notifyAdmins, adminNewOrderNotification } from '@/lib/notification-service'
 
 export async function POST(request: NextRequest) {
     try {
@@ -193,6 +194,18 @@ export async function POST(request: NextRequest) {
             type: 'order_update',
             action_url: `/dashboard/my-orders`,
         })
+
+        // Notify admins of the new order (in-app + best-effort push)
+        notifyAdmins(
+            adminNewOrderNotification({
+                orderRef: referenceCode,
+                network: (pkg as any).network,
+                size: (pkg as any).size,
+                amount: priceToCharge,
+                phone: phoneNumber,
+            }),
+            { excludeUserId: userId! },
+        ).catch((e) => console.error('[OrderPurchase] Admin notify error:', e))
 
         // Send order confirmation email to user and admin alert (async, non-blocking)
         try {

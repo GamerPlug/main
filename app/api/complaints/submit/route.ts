@@ -2,6 +2,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { sendAdminNewComplaintAlert } from '@/lib/email-service'
+import { notifyAdmins, adminNewComplaintNotification } from '@/lib/notification-service'
 
 export async function POST(request: Request) {
     try {
@@ -74,6 +75,12 @@ export async function POST(request: Request) {
                 console.error('Failed to send admin alert:', emailError)
                 // Don't fail the request
             }
+
+            // In-app + push admin alert (non-blocking)
+            const complainant = `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || 'A user'
+            notifyAdmins(
+                adminNewComplaintNotification(orderData.reference_code, complainant),
+            ).catch((err) => console.error('Failed to send admin in-app complaint alert:', err))
         }
 
         return NextResponse.json({ success: true, complaint })

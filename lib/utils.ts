@@ -1,8 +1,18 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { formatDistanceToNow } from "date-fns"
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
+}
+
+/** Human-friendly relative time, e.g. "2 minutes ago". Falls back to a full date. */
+export function formatRelativeTime(date: string | Date): string {
+    try {
+        return formatDistanceToNow(new Date(date), { addSuffix: true })
+    } catch {
+        return formatDate(date)
+    }
 }
 
 export function formatCurrency(amount: number): string {

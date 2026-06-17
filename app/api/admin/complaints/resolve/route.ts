@@ -1,6 +1,7 @@
 import { createServerClient } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
+import { createNotification, complaintResolvedNotification } from '@/lib/notification-service'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,19 +43,12 @@ export async function POST(request: Request) {
 
         if (updateError) throw updateError
 
-        // Create notification
-        const { error: notifyError } = await (supabase
-            .from('notifications') as any)
-            .insert({
-                user_id,
-                title: `Complaint ${status === 'resolved' ? 'Resolved' : 'Rejected'}`,
-                message: `Your complaint regarding order ${order_ref} has been ${status}.`,
-                type: 'complaint_resolved',
-                action_url: '/dashboard/complaints'
-            })
-
-        if (notifyError) {
-            console.error('Error creating notification:', notifyError)
+        // Create notification (in-app + best-effort web push)
+        if (user_id) {
+            await createNotification({
+                userId: user_id,
+                ...complaintResolvedNotification(order_ref, status as 'resolved' | 'rejected', resolution_notes),
+            }).catch((e) => console.error('Error creating notification:', e))
         }
 
         // Send email notification

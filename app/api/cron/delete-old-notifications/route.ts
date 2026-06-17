@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase'
+import { cleanupOldNotifications } from '@/lib/notification-service'
 
 export async function GET(request: NextRequest) {
     // Verify cron secret
@@ -8,28 +8,24 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = createServerClient()
-
     try {
-        // Calculate date 24 hours ago
-        const twentyFourHoursAgo = new Date()
-        twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24)
+        // Policy (B2 fix): keep unseen alerts alive.
+        //   - read notifications older than 7 days   -> deleted
+        //   - any notification older than 30 days     -> deleted (incl. unread)
+        const result = await cleanupOldNotifications()
 
-        // Delete notifications older than 24 hours
-        const { data, error, count } = await (supabase
-            .from('notifications') as any)
-            .delete()
-            .lt('created_at', twentyFourHoursAgo.toISOString())
-            .select('id', { count: 'exact' })
+        if (!result.success) {
+            throw result.error
+        }
 
-        if (error) throw error
-
-        console.log(`Deleted ${count || 0} notifications older than 24 hours`)
+        console.log(
+            `Notification cleanup: removed ${result.deletedRead} read (>7d) and ${result.deletedOld} stale (>30d)`,
+        )
 
         return NextResponse.json({
             success: true,
-            deleted: count || 0,
-            cutoffDate: twentyFourHoursAgo.toISOString()
+            deletedRead: result.deletedRead,
+            deletedOld: result.deletedOld,
         })
     } catch (error) {
         console.error('Cron delete-old-notifications error:', error)

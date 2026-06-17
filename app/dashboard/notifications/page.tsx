@@ -1,108 +1,171 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
 import { supabase } from '@/lib/supabase'
-import { formatDate } from '@/lib/utils'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatRelativeTime } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { NotificationIcon } from '@/components/notifications/notification-icon'
+import { typesForCategory, CATEGORY_LABELS } from '@/lib/notification-meta'
+import { usePushNotifications } from '@/hooks/use-push-notifications'
 import {
     Bell,
     CheckCircle2,
-    ShoppingCart,
-    CreditCard,
-    MessageSquare,
-    Wallet,
     Trash2,
     Check,
-    AlertCircle,
     Loader2,
-    Trash
+    Trash,
+    SlidersHorizontal,
+    BellRing,
+    ChevronDown,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Notification } from '@/types/supabase'
+import { isToday, isYesterday } from 'date-fns'
+import type { Notification, NotificationCategory } from '@/types/supabase'
+
+const PAGE_SIZE = 20
+type Filter = 'all' | 'unread' | NotificationCategory
+
+const FILTER_CHIPS: { key: Filter; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'unread', label: 'Unread' },
+    { key: 'order', label: CATEGORY_LABELS.order },
+    { key: 'payment', label: CATEGORY_LABELS.payment },
+    { key: 'security', label: CATEGORY_LABELS.security },
+    { key: 'announcement', label: CATEGORY_LABELS.announcement },
+    { key: 'marketing', label: CATEGORY_LABELS.marketing },
+]
+
+function dateGroup(dateStr: string): string {
+    const d = new Date(dateStr)
+    if (isToday(d)) return 'Today'
+    if (isYesterday(d)) return 'Yesterday'
+    return 'Earlier'
+}
 
 export default function NotificationsPage() {
     const { dbUser, isLoading: isAuthLoading } = useAuth()
+    const router = useRouter()
+    const { isSupported, isSubscribed, subscribe, isBusy } = usePushNotifications()
+
     const [notifications, setNotifications] = useState<Notification[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [filter, setFilter] = useState<'all' | 'unread'>('all')
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [hasMore, setHasMore] = useState(false)
+    const [filter, setFilter] = useState<Filter>('all')
+    const [unreadCount, setUnreadCount] = useState(0)
     const [markingAllRead, setMarkingAllRead] = useState(false)
     const [deletingAll, setDeletingAll] = useState(false)
+    const [showPushCard, setShowPushCard] = useState(true)
 
-    useEffect(() => {
-        if (!isAuthLoading) {
-            if (dbUser) {
-                fetchNotifications()
-            } else {
-                setIsLoading(false)
+    const applyFilter = useCallback((query: any, f: Filter) => {
+        if (f === 'unread') return query.eq('is_read', false)
+        if (f !== 'all') return query.in('type', typesForCategory(f))
+        return query
+    }, [])
+
+    const fetchUnreadCount = useCallback(async () => {
+        if (!dbUser) return
+        const { count } = await supabase
+            .from('notifications')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', dbUser.id as any)
+            .eq('is_read', false)
+        setUnreadCount(count || 0)
+    }, [dbUser])
+
+    const fetchPage = useCallback(
+        async (reset: boolean) => {
+            if (!dbUser) return
+            const offset = reset ? 0 : notifications.length
+            try {
+                let query = supabase
+                    .from('notifications')
+                    .select('*')
+                    .eq('user_id', dbUser.id as any)
+                    .order('created_at', { ascending: false })
+                    .range(offset, offset + PAGE_SIZE - 1)
+                query = applyFilter(query, filter)
+
+                const { data, error } = await query
+                if (error) throw error
+                const rows = (data as Notification[]) || []
+                setNotifications((prev) => (reset ? rows : [...prev, ...rows]))
+                setHasMore(rows.length === PAGE_SIZE)
+            } catch (e) {
+                console.error('Error fetching notifications:', e)
+                toast.error('Failed to load notifications')
             }
-        }
-    }, [dbUser, isAuthLoading])
+        },
+        [dbUser, filter, notifications.length, applyFilter],
+    )
 
-    // Real-time subscription for live notification updates
+    // Initial + filter-change load
+    useEffect(() => {
+        if (isAuthLoading) return
+        if (!dbUser) {
+            setIsLoading(false)
+            return
+        }
+        setIsLoading(true)
+        Promise.all([fetchPage(true), fetchUnreadCount()]).finally(() => setIsLoading(false))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dbUser, isAuthLoading, filter])
+
+    // Realtime
     useEffect(() => {
         if (!dbUser) return
-
         const channel = supabase
-            .channel(`notifications-${dbUser.id}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${dbUser.id}` }, () => {
-                fetchNotifications()
-            })
+            .channel(`notifications-page-${dbUser.id}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${dbUser.id}` },
+                () => {
+                    fetchPage(true)
+                    fetchUnreadCount()
+                },
+            )
             .subscribe()
-
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [dbUser])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dbUser, filter])
 
-    const fetchNotifications = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('notifications')
-                .select('*')
-                .eq('user_id', dbUser?.id as any)
-                .order('created_at', { ascending: false })
-
-            if (error) throw error
-            setNotifications(data || [])
-        } catch (error) {
-            console.error('Error fetching notifications:', error)
-            toast.error('Failed to load notifications')
-        } finally {
-            setIsLoading(false)
-        }
+    const loadMore = async () => {
+        setLoadingMore(true)
+        await fetchPage(false)
+        setLoadingMore(false)
     }
 
     const markAsRead = async (id: string) => {
-        try {
-            await (supabase
-                .from('notifications') as any)
-                .update({ is_read: true })
-                .eq('id', id)
+        setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)))
+        setUnreadCount((c) => Math.max(0, c - 1))
+        await (supabase.from('notifications') as any)
+            .update({ is_read: true, read_at: new Date().toISOString() })
+            .eq('id', id)
+    }
 
-            setNotifications(prev =>
-                prev.map(n => n.id === id ? { ...n, is_read: true } : n)
-            )
-        } catch (error) {
-            toast.error('Failed to mark as read')
-        }
+    const openNotification = (n: Notification) => {
+        if (!n.is_read) markAsRead(n.id)
+        if (n.action_url) router.push(n.action_url)
     }
 
     const markAllAsRead = async () => {
+        if (!dbUser) return
         setMarkingAllRead(true)
         try {
-            await (supabase
-                .from('notifications') as any)
-                .update({ is_read: true })
-                .eq('user_id', dbUser?.id as any)
+            await (supabase.from('notifications') as any)
+                .update({ is_read: true, read_at: new Date().toISOString() })
+                .eq('user_id', dbUser.id as any)
                 .eq('is_read', false)
-
-            setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+            setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
+            setUnreadCount(0)
             toast.success('All notifications marked as read')
-        } catch (error) {
+        } catch {
             toast.error('Failed to mark all as read')
         } finally {
             setMarkingAllRead(false)
@@ -110,60 +173,54 @@ export default function NotificationsPage() {
     }
 
     const deleteNotification = async (id: string) => {
-        try {
-            await (supabase
-                .from('notifications') as any)
-                .delete()
-                .eq('id', id)
-
-            setNotifications(prev => prev.filter(n => n.id !== id))
-            toast.success('Notification deleted')
-        } catch (error) {
+        const prev = notifications
+        const wasUnread = notifications.find((n) => n.id === id && !n.is_read)
+        setNotifications((p) => p.filter((n) => n.id !== id))
+        if (wasUnread) setUnreadCount((c) => Math.max(0, c - 1))
+        const { error } = await (supabase.from('notifications') as any).delete().eq('id', id)
+        if (error) {
+            setNotifications(prev)
             toast.error('Failed to delete notification')
         }
     }
 
     const deleteAllNotifications = async () => {
+        if (!dbUser) return
         setDeletingAll(true)
         try {
-            await (supabase
-                .from('notifications') as any)
+            const { error } = await (supabase.from('notifications') as any)
                 .delete()
-                .eq('user_id', dbUser?.id as any)
-
+                .eq('user_id', dbUser.id as any)
+            if (error) throw error
             setNotifications([])
+            setUnreadCount(0)
             toast.success('All notifications deleted')
-        } catch (error) {
+        } catch {
             toast.error('Failed to delete all notifications')
         } finally {
             setDeletingAll(false)
         }
     }
 
-    const getIcon = (type: string) => {
-        switch (type) {
-            case 'order_update':
-                return <ShoppingCart className="w-5 h-5 text-blue-600 dark:text-blue-500" />
-            case 'payment_success':
-                return <CreditCard className="w-5 h-5 text-green-600 dark:text-green-500" />
-            case 'complaint_resolved':
-                return <MessageSquare className="w-5 h-5 text-purple-600 dark:text-purple-500" />
-            case 'balance_updated':
-                return <Wallet className="w-5 h-5 text-amber-600 dark:text-amber-500" />
-            default:
-                return <Bell className="w-5 h-5 text-slate-500" />
-        }
+    const enablePush = async () => {
+        const ok = await subscribe()
+        if (ok) toast.success('Push notifications enabled!')
+        else toast.error('Could not enable push notifications')
     }
 
-    const filteredNotifications = filter === 'unread'
-        ? notifications.filter(n => !n.is_read)
-        : notifications
-
-    const unreadCount = notifications.filter(n => !n.is_read).length
+    // Group the loaded notifications by day bucket (preserves order).
+    const groups: { label: string; items: Notification[] }[] = []
+    for (const n of notifications) {
+        const label = dateGroup(n.created_at)
+        const last = groups[groups.length - 1]
+        if (last && last.label === label) last.items.push(n)
+        else groups.push({ label, items: [n] })
+    }
 
     if (isLoading) {
         return (
             <div className="space-y-4">
+                <Skeleton className="h-12 rounded-2xl" />
                 {[...Array(5)].map((_, i) => (
                     <Skeleton key={i} className="h-20 rounded-2xl" />
                 ))}
@@ -172,31 +229,39 @@ export default function NotificationsPage() {
     }
 
     return (
-        <div className="space-y-6 lg:space-y-8 relative z-10">
+        <div className="space-y-6 relative z-10">
+            {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight drop-shadow-sm dark:drop-shadow-md">Notifications</h1>
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Notifications</h1>
                     <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">
                         {unreadCount > 0 ? (
                             <span className="flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                                 {unreadCount} unread notification{unreadCount > 1 ? 's' : ''}
                             </span>
-                        ) : 'All caught up!'}
+                        ) : (
+                            'All caught up!'
+                        )}
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                    <Link href="/dashboard/notifications/preferences">
+                        <Button variant="outline" size="sm" className="rounded-xl font-bold text-xs h-10 px-3">
+                            <SlidersHorizontal className="w-4 h-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Settings</span>
+                        </Button>
+                    </Link>
                     {unreadCount > 0 && (
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={markAllAsRead}
                             disabled={markingAllRead}
-                            className="bg-slate-50/50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl font-bold text-xs h-10 px-4 transition-all"
+                            className="rounded-xl font-bold text-xs h-10 px-3"
                         >
                             {markingAllRead ? <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" /> : <Check className="w-4 h-4 sm:mr-2 text-primary" />}
-                            <span className="hidden sm:inline">Mark all as read</span>
-                            <span className="sm:hidden">Mark read</span>
+                            <span className="hidden sm:inline">Mark all read</span>
                         </Button>
                     )}
                     {notifications.length > 0 && (
@@ -205,82 +270,106 @@ export default function NotificationsPage() {
                             size="sm"
                             onClick={deleteAllNotifications}
                             disabled={deletingAll}
-                            className="bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400 hover:text-white hover:bg-rose-500 hover:border-rose-500 rounded-xl font-bold text-xs h-10 px-4 transition-all"
+                            className="bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400 hover:text-white hover:bg-rose-500 hover:border-rose-500 rounded-xl font-bold text-xs h-10 px-3 transition-all"
                         >
                             {deletingAll ? <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" /> : <Trash className="w-4 h-4 sm:mr-2" />}
-                            <span className="hidden sm:inline">Delete All</span>
-                            <span className="sm:hidden">Delete</span>
+                            <span className="hidden sm:inline">Delete all</span>
                         </Button>
                     )}
                 </div>
             </div>
 
-            {/* Filter */}
-            <div className="flex items-center gap-2 p-1.5 glass-card rounded-2xl w-fit border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-black/40 backdrop-blur-md shadow-inner">
-                <Button
-                    variant={filter === 'all' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setFilter('all')}
-                    className={`rounded-xl text-xs font-bold px-5 h-9 transition-all ${filter === 'all' ? 'gradient-primary text-white shadow-lg' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
-                >
-                    All ({notifications.length})
-                </Button>
-                <Button
-                    variant={filter === 'unread' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setFilter('unread')}
-                    className={`rounded-xl text-xs font-bold px-5 h-9 transition-all ${filter === 'unread' ? 'bg-slate-200/50 dark:bg-white/20 text-slate-900 dark:text-white shadow-lg border border-slate-300 dark:border-white/10' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
-                >
-                    Unread ({unreadCount})
-                </Button>
+            {/* Push opt-in card */}
+            {isSupported && !isSubscribed && showPushCard && (
+                <div className="glass-card rounded-2xl p-4 border border-primary/20 bg-primary/[0.04] flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                            <BellRing className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-black text-foreground">Turn on push notifications</p>
+                            <p className="text-xs font-medium text-foreground/55">Get instant alerts even when the app is closed.</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <Button size="sm" onClick={enablePush} disabled={isBusy} className="rounded-xl font-bold text-xs h-9">
+                            {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enable'}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setShowPushCard(false)} className="rounded-xl font-bold text-xs h-9 text-foreground/50">
+                            Later
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* Filter chips */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                {FILTER_CHIPS.map((chip) => (
+                    <button
+                        key={chip.key}
+                        onClick={() => setFilter(chip.key)}
+                        className={`whitespace-nowrap rounded-xl text-xs font-bold px-4 h-9 transition-all border ${
+                            filter === chip.key
+                                ? 'gradient-primary text-white shadow-lg border-transparent'
+                                : 'bg-slate-50/50 dark:bg-black/40 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border-slate-200 dark:border-white/10'
+                        }`}
+                    >
+                        {chip.label}
+                        {chip.key === 'unread' && unreadCount > 0 && ` (${unreadCount})`}
+                    </button>
+                ))}
             </div>
 
-            {/* Notifications List */}
-            {filteredNotifications.length === 0 ? (
-                <div className="glass-card p-12 text-center rounded-[2rem] border-slate-200 dark:border-white/5 flex flex-col items-center justify-center bg-white/50 dark:bg-black/40 shadow-sm dark:shadow-xl">
-                    <div className="w-20 h-20 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center mb-6 shadow-inner">
+            {/* List */}
+            {notifications.length === 0 ? (
+                <div className="glass-card p-12 text-center rounded-[2rem] border-slate-200 dark:border-white/5 flex flex-col items-center justify-center bg-white/50 dark:bg-black/40">
+                    <div className="w-20 h-20 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center mb-6">
                         <Bell className="w-10 h-10 text-slate-400 dark:text-slate-500" />
                     </div>
                     <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">No Notifications</h3>
                     <p className="text-slate-500 dark:text-slate-400">
-                        {filter === 'unread' ? "You've read all your notifications!" : "You don't have any notifications yet."}
+                        {filter === 'all' ? "You don't have any notifications yet." : 'Nothing here for this filter.'}
                     </p>
                 </div>
             ) : (
-                <div className="space-y-4">
-                    {filteredNotifications.map((notification) => (
-                        <div
-                            key={notification.id}
-                            className={`glass-card p-5 rounded-2xl relative overflow-hidden group transition-all duration-300 bg-white/50 dark:bg-black/40 backdrop-blur-md hover:bg-white dark:hover:bg-black/60 shadow-sm hover:shadow-xl ${!notification.is_read
-                                ? 'border-primary/30 dark:border-primary/30 shadow-[0_0_20px_rgba(225,0,255,0.1)] dark:shadow-[0_0_20px_rgba(225,0,255,0.1)]'
-                                : 'border-slate-100 dark:border-white/5 opacity-90'
-                                }`}
-                        >
-                            {!notification.is_read && (
-                                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary to-indigo-500 shadow-[0_0_10px_rgba(225,0,255,0.5)]"></div>
-                            )}
-
-                            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6 pl-2 sm:pl-4">
-                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-inner ${!notification.is_read ? 'bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30' : 'bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5'
-                                    }`}>
-                                    <div className={`${notification.is_read ? 'opacity-60' : 'drop-shadow-[0_0_8px_rgba(225,0,255,0.3)]'}`}>
-                                        {getIcon(notification.type)}
-                                    </div>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                                        <div className="space-y-1">
+                <div className="space-y-6">
+                    {groups.map((group) => (
+                        <div key={group.label} className="space-y-3">
+                            <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 px-1">{group.label}</p>
+                            {group.items.map((notification) => (
+                                <div
+                                    key={notification.id}
+                                    className={`glass-card p-4 sm:p-5 rounded-2xl relative overflow-hidden group transition-all duration-300 bg-white/50 dark:bg-black/40 hover:bg-white dark:hover:bg-black/60 shadow-sm hover:shadow-xl ${
+                                        !notification.is_read
+                                            ? 'border-primary/30 dark:border-primary/30'
+                                            : 'border-slate-100 dark:border-white/5 opacity-95'
+                                    }`}
+                                >
+                                    {!notification.is_read && (
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary to-indigo-500" />
+                                    )}
+                                    <div className="flex items-start gap-4 pl-2">
+                                        <div
+                                            className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 border ${
+                                                !notification.is_read
+                                                    ? 'bg-primary/10 dark:bg-primary/20 border-primary/20 dark:border-primary/30'
+                                                    : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5'
+                                            }`}
+                                        >
+                                            <NotificationIcon type={notification.type} className="w-5 h-5" />
+                                        </div>
+                                        <button onClick={() => openNotification(notification)} className="flex-1 min-w-0 text-left">
                                             <h3 className={`text-base font-black tracking-tight ${!notification.is_read ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-300'}`}>
                                                 {notification.title}
                                             </h3>
-                                            <p className={`text-sm font-medium leading-relaxed ${!notification.is_read ? 'text-slate-600 dark:text-slate-400' : 'text-slate-500 dark:text-slate-500'}`}>
+                                            <p className={`text-sm font-medium leading-relaxed mt-0.5 ${!notification.is_read ? 'text-slate-600 dark:text-slate-400' : 'text-slate-500 dark:text-slate-500'}`}>
                                                 {notification.message}
                                             </p>
-                                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest pt-1">
-                                                {formatDate(notification.created_at)}
+                                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest pt-1.5">
+                                                {formatRelativeTime(notification.created_at)}
                                             </p>
-                                        </div>
-                                        <div className="flex items-center gap-2 self-end sm:self-start">
+                                        </button>
+                                        <div className="flex items-center gap-1 self-start">
                                             {!notification.is_read && (
                                                 <Button
                                                     size="icon"
@@ -304,9 +393,23 @@ export default function NotificationsPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            ))}
                         </div>
                     ))}
+
+                    {hasMore && (
+                        <div className="flex justify-center pt-2">
+                            <Button
+                                variant="outline"
+                                onClick={loadMore}
+                                disabled={loadingMore}
+                                className="rounded-xl font-bold text-xs h-10 px-6"
+                            >
+                                {loadingMore ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ChevronDown className="w-4 h-4 mr-2" />}
+                                Load more
+                            </Button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

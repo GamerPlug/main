@@ -1,158 +1,158 @@
-# GAMER PLUG SOLUTION — Rebranding & UI Build Plan
+# PLAN — Modern Notifications + Web Push + Installable PWA
 
-**Protocol:** 5-Stage Workflow. No stage begins without explicit approval.  
-**Current stage:** Stage 2 → Stage 3 (approved 2026-06-01)
-
----
-
-## Stage Status
+**Protocol:** 5-Stage Workflow. No stage begins without explicit approval.
+**Current stage:** Stage 2 (Planning) — awaiting approval to start Stage 3.
+**Mode:** All-in-one build (single Security + QA pass at the end).
+**SW strategy:** Hand-rolled minimal service worker (only new dependency: server-side `web-push`).
+**New-notification scope:** Money · Account & security · Admin broadcast · Marketing/engagement · Order lifecycle.
 
 | Stage | Name | Status |
 |---|---|---|
 | 1 | Exploration (Audit) | ✅ Complete |
-| 2 | Planning | ✅ Complete — this document |
-| 3 | Execution | 🔄 In Progress |
+| 2 | Planning | ✅ This document |
+| 3 | Execution | ⏳ Awaiting approval |
 | 4 | Security Audit | ⏳ Pending |
 | 5 | QA & Push | ⏳ Pending |
 
 ---
 
-## Phase 1 — Database Fix (Blocking — must run before first login)
+## 0. Audit summary (Stage 1) — what we are fixing
 
-> File: `supabase/clone_database.sql`
+| # | Finding | Severity | Fix |
+|---|---------|----------|-----|
+| B1 | No DELETE RLS policy → user "Delete"/"Delete All" silently no-ops, rows reappear on refresh | High | Add user DELETE policy |
+| B2 | Cleanup cron deletes **all** notifications >24h incl. unread → users lose unseen alerts | High | Read >7d, unread >30d |
+| B3 | Header bell badge fetched once, no realtime → stale until reload | Medium | Realtime + dropdown |
+| B4 | `paymentSuccessNotification`, `complaintResolvedNotification`, `balanceUpdatedNotification` are dead code | Medium | Replace w/ central service |
+| B5 | User self top-up (`payments/verify`) creates **no** in-app notification | Medium | Wire payment_success + balance_credited |
+| B6 | `system_announcements`: admins post, **no user ever sees them** (zero consumers) | High | Fan out → notifications + push |
+| B7 | `type` is free-text; page `getIcon` handles only 4 types | Low | Standardize taxonomy |
 
-### Fix 1.1 — Role constraint (CRITICAL)
-**Problem:** Constraint only allows 5 roles. App defines 8.  
-**Fix:** Expand to include all roles from `lib/roles.ts`.
-```sql
-CHECK (role IN ('admin', 'sub-admin', 'platinum', 'super dealer', 'dealer', 'super agent', 'agent', 'user'))
-```
+---
 
-### Fix 1.2 — Default role on sign-up (CRITICAL)
-**Problem:** `handle_new_user` trigger defaults new users to `'customer'` — an unknown role.  
-**Fix:** Change default to `'user'`.
-```sql
-COALESCE(new.raw_user_meta_data->>'role', 'user')
-```
+## 1. Database migration — `supabase/notifications_pwa_migration.sql`
+One idempotent file (CREATE/ADD/DROP POLICY IF NOT EXISTS), matching existing migration style.
 
-### Fix 1.3 — Missing wallet columns (CRITICAL)
-**Problem:** `auth-context.tsx` selects `credit_limit` and `unlimited_credit` from wallets — columns don't exist.  
-**Fix:** Add columns to wallets table definition.
-```sql
-credit_limit   DECIMAL(12,2) DEFAULT 0,
-unlimited_credit BOOLEAN DEFAULT false,
-```
+**1a. `notifications` upgrades**
+- `read_at TIMESTAMPTZ`, `metadata JSONB DEFAULT '{}'`, `priority TEXT DEFAULT 'normal'` (`low|normal|high`)
+- Index `idx_notifications_user_unread (user_id, is_read, created_at DESC)`
+- **RLS fix B1:** `FOR DELETE USING (auth.uid() = user_id)`
 
-### Fix 1.4 — Missing tables
-**Problem:** Admin pages exist in the app with no backing tables.
+**1b. `push_subscriptions`** — `id, user_id fk, endpoint unique, p256dh, auth, user_agent, created_at, last_used_at`; RLS own + service ALL; index `user_id`.
 
-| Admin Page | Missing Table |
+**1c. `notification_preferences`** — `user_id pk fk, order_updates, payments, security, announcements (default true), marketing (default false), push_enabled (default true), updated_at`; RLS own + service; lazily upserted.
+
+**1d. `system_announcements`** — add `target_role TEXT DEFAULT 'all'` (`all|admin|dealer|agent`), `send_push BOOLEAN DEFAULT true`.
+
+---
+
+## 2. Types — `types/supabase.ts`
+- Expand `NotificationType` to full taxonomy (§3).
+- Add `PushSubscription`, `NotificationPreferences`; extend `Notification` (`read_at?`, `metadata?`, `priority?`) and `SystemAnnouncement` (`target_role`, `send_push`).
+- Register new tables in the `Database` generic.
+
+---
+
+## 3. Taxonomy (single source of truth)
+`order_placed · order_processing · order_completed · order_failed · payment_success · refund_issued · balance_credited · balance_debited · low_balance · credit_limit_reached · settlement_due · complaint_received · complaint_resolved · complaint_rejected · account_suspended · account_reactivated · role_upgraded · role_downgraded · security_new_login · security_password_changed · api_key_created · api_key_revoked · announcement · promo · new_package · price_drop · renewal_reminder · system`
+
+Each maps to `{ category, icon, priority, defaultActionUrl }` for consistent UI + preference gating.
+
+---
+
+## 4. Service layer — rewrite `lib/notification-service.ts`
+- `createNotification(data)` → insert row, **then** best-effort `sendPushToUser` (never throws into caller).
+- Gates on `notification_preferences` (category) + `push_enabled` before pushing.
+- `createBulkNotifications(userIds[], data)` → chunked insert + chunked push (broadcast).
+- Idempotency via `metadata.dedupe_key` (e.g. `order_completed:<order_id>`) — skip if exists (stops duplicate alerts from re-running crons).
+- `notificationTemplates` factory covering every type in §3.
+
+---
+
+## 5. Web Push — `lib/web-push.ts` + API
+- Dep: `web-push` (+ `@types/web-push` dev).
+- Env (add to `.env.example`): `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`.
+- `lib/web-push.ts`: lazy VAPID config; `sendPushToUser` / `sendPushToMany`; prune subs on 404/410.
+- `POST /api/push/subscribe` — auth required; `user_id` from session (never body); upsert by endpoint; rate-limited.
+- `POST /api/push/unsubscribe` — remove endpoint for current user.
+
+---
+
+## 6. Service worker + client (hand-rolled)
+- `public/sw.js`: `install/activate` (precache shell + `/offline`, skipWaiting/clients.claim); `push` → `showNotification`; `notificationclick` → focus/open `data.url`; `fetch` → network-first navigations w/ `/offline` fallback. **No caching of API/auth responses.**
+- `hooks/use-push-notifications.ts`: register SW, request permission, subscribe w/ VAPID, POST subscribe; returns `{ permission, isSubscribed, subscribe, unsubscribe, isSupported }`.
+- `components/pwa/sw-register.tsx`: registers SW; mounted in `app/layout.tsx`.
+
+---
+
+## 7. PWA / Installable
+- `app/manifest.ts`: name/short_name, `display: standalone`, `start_url:/dashboard`, `scope:/`, brand colors, icons (192, 512, 512-maskable).
+- `public/icons/*` from `logo.png`: 192, 512, maskable-512, apple-touch-180 (generate via temp `sharp`; fallback hand-padded).
+- `app/layout.tsx`: Apple meta tags, `apple-touch-icon`, manifest link, brand `themeColor`.
+- `components/pwa/install-prompt.tsx`: `beforeinstallprompt` banner (Android/desktop) + iOS A2HS instructions modal; triggers in sidebar footer + header.
+- `app/offline/page.tsx`: branded offline screen.
+- iOS note in copy: web push requires installed PWA (iOS 16.4+).
+
+---
+
+## 8. UI modernization
+- **Header bell**: realtime subscription, dropdown preview (latest 5 + mark-all + "See all"), live badge (fixes B3).
+- **Notifications page**: date grouping, category filter chips, mark-read-on-click, pagination/infinite scroll, push opt-in card, preferences link. Delete works post-B1.
+- **Foreground toast** on realtime insert (Sonner).
+- **Preferences page** `app/dashboard/notifications/preferences/page.tsx`: per-category toggles, master push toggle, permission state, "Send test notification".
+- **Admin announcements** (`app/admin/announcements/page.tsx`): add target_role select + "send push" toggle; on create call `POST /api/admin/announcements/broadcast` (fan out + push) — fixes B6.
+
+---
+
+## 9. Wire the gaps (route-by-route)
+| Route / file | Add |
 |---|---|
-| `app/admin/api-management/` | `api_keys` |
-| `app/admin/memberships/` | `memberships` |
-| `app/admin/mtn-logs/` | `mtn_logs` |
-| `app/admin/ishare-logs/` | `ishare_logs` |
-| `app/admin/profits-history/` | `profits_history` |
-
-### Fix 1.5 — Default settings update
-- Change `support_email` from `support@mdatagh.com` to `support@gamerplug.com`
-- Add missing keys: `support_whatsapp`, `whatsapp_group_link`, `whatsapp_channel_link`
-- Fix final comment from "MDataGH" to "GAMER PLUG SOLUTION"
-
----
-
-## Phase 2 — Brand Rename (3 remaining files)
-
-### Fix 2.1 — `app/admin/orders/page.tsx`
-Replace 3 occurrences of `EASYDATA_` with `GAMERPLUG_` in export filenames:
-- Line 469: fallback filename
-- Line 655: export prefix
-- Line 776: filename check condition
-
-### Fix 2.2 — `app/admin/settings/page.tsx`
-- Line 149: `"EASYDATA Settings"` → `"GAMER PLUG Settings"`
-- Line 179: placeholder `"support@EASYDATA.com"` → `"support@gamerplug.com"`
-
-### Fix 2.3 — `lib/email-service.ts`
-- Line 5: comment `"KING FLEXY DATA LTD"` → `"GAMER PLUG SOLUTION"`
+| `app/api/payments/verify/route.ts` | `payment_success` + `balance_credited` (B5) |
+| `app/api/admin/users/wallet/adjustment/route.ts` | inline insert → central service + push |
+| `app/api/admin/complaints/resolve/route.ts` | inline insert → central service + push |
+| `orders/purchase`, `create-bulk`, `v1/orders/purchase` | `order_placed` + push (standardize) |
+| `lib/ishare-fulfillment.ts`, `cron/sync-mtn-status`, `cron/sync-codecraft-status` | `order_completed/failed` via service + push + dedupe |
+| `admin/orders/refund`, `admin/orders/status` | `refund_issued` / status + push |
+| `admin/users/role` | `role_upgraded` / `role_downgraded` |
+| `admin/users/update-status`, `settle-reactivate` | `account_suspended` / `account_reactivated` / `settlement_due` |
+| `app/api/user/api-keys` | `api_key_created` / `api_key_revoked` |
+| `cron/agent-renewal-reminder` | in-app `renewal_reminder` alongside email |
+| (optional) `cron/low-balance-check` | proactive `low_balance` |
 
 ---
 
-## Phase 3 — Landing Page Completion (`app/page.tsx`)
-
-### Sections to build / complete:
-1. **Nav** — Logo, brand name, Login/Get Started CTA (already started)
-2. **Hero** — Tagline, animated cyber-glow, stats bar (active users, networks, uptime)
-3. **Networks Strip** — MTN / Telecel / AirtelTigo network cards
-4. **How It Works** — 3-step: Create Account → Fund Wallet → Buy Data
-5. **Features Grid** — Instant delivery, secure wallet, 24/7 support, API access, multi-network, role tiers
-6. **Pricing Preview** — Sample package cards with network colors
-7. **Social Proof** — Testimonial strip + community WhatsApp CTA
-8. **Footer** — Brand, links, support email/WhatsApp (dynamic from DB)
-
-### Design rules (all sections):
-- Dark mode default, glassmorphic cards (`.glass-card`, `.cyber-card`)
-- Electric blue (`hsl(217 100% 60%)`) primary CTAs
-- Cyan glow (`hsl(195 100% 55%)`) accents
-- Orbitron font for all headings, Rajdhani for body
-- Grid scanline overlay on hero (already wired in `globals.css`)
-- Mobile-first, responsive at sm/md/lg breakpoints
+## 10. Cleanup cron fix (B2)
+`cron/delete-old-notifications` + `cleanupOldNotifications`: delete **read** >7d AND **unread** >30d (keeps unseen alerts).
 
 ---
 
-## Phase 4 — Dashboard Home Page (`app/dashboard/page.tsx`)
-
-### Widgets to implement / polish:
-1. **Welcome bar** — User name, role badge, wallet balance chip
-2. **Quick Stats** — Total orders, pending orders, total spent (from DB)
-3. **Quick Buy** — Network selector → package selector → phone input → Buy Now
-4. **Recent Orders table** — Last 5 orders, status chips, network icons
-5. **Wallet card** — Balance display, Top Up button, credit limit if applicable
-6. **Community section** — WhatsApp group/channel links (dynamic from `admin_settings`)
+## 11. Files
+**New:** `supabase/notifications_pwa_migration.sql`, `lib/web-push.ts`, `app/api/push/subscribe/route.ts`, `app/api/push/unsubscribe/route.ts`, `app/api/admin/announcements/broadcast/route.ts`, `public/sw.js`, `public/icons/*`, `app/manifest.ts`, `app/offline/page.tsx`, `hooks/use-push-notifications.ts`, `components/pwa/sw-register.tsx`, `components/pwa/install-prompt.tsx`, `app/dashboard/notifications/preferences/page.tsx`.
+**Modified:** `lib/notification-service.ts`, `types/supabase.ts`, `app/layout.tsx`, `components/dashboard/header.tsx`, `components/dashboard/sidebar.tsx`, `app/dashboard/notifications/page.tsx`, `app/admin/announcements/page.tsx`, `app/api/cron/delete-old-notifications/route.ts`, `.env.example`, + ~10 wiring routes (§9).
 
 ---
 
-## Phase 5 — Sidebar Polish (`components/dashboard/sidebar.tsx`)
+## 12. Security checklist (Stage 4)
+- `subscribe` binds `user_id` from session, never body; rate-limited.
+- Broadcast route `requireAdmin`; chunked; respects target_role.
+- New tables RLS = own-row only; service role for fan-out.
+- VAPID private key server-only; only public key is `NEXT_PUBLIC_`.
+- SW caches no authenticated/API responses (no stale wallet/order data).
+- CSP: SW + manifest same-origin (covered by `default-src 'self'`) — confirm no change.
 
-- Confirm logo renders correctly at all collapse states
-- Role badge color matches `lib/roles.ts` `roleConfig`
-- Wallet balance live (already wired via Realtime in auth-context)
-- Active route highlight with cyber-blue left border
-- Mobile bottom nav drawer (already exists, verify styling)
-
----
-
-## Environment Variables Required
-
-These must be set in `.env.local` (dev) and Vercel dashboard (prod):
-
-```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=
-PAYSTACK_SECRET_KEY=
-BREVO_API_KEY=
-BREVO_SENDER_NAME=GAMER PLUG
-BREVO_SENDER_EMAIL=noreply@gamerplug.com
-MOOLRE_API_KEY=
-MOOLRE_SENDER_ID=GPLUG
-MTN_API_KEY=
-MTN_TARGET_ENV=
-AT_ISHARE_API_KEY=
-SPFASTIT_API_KEY=
-NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
-```
+## 13. QA checklist (Stage 5)
+- `tsc --noEmit`, `next lint`, `next build`.
+- Manifest installability (Lighthouse); install on Android Chrome + desktop; iOS A2HS documented.
+- Push end-to-end (Android/desktop): permission → subscribe → receive → click → route.
+- Realtime bell + toast; delete/mark-read post-RLS; cron dry-run.
 
 ---
 
-## Execution Order
+## 14. Execution order (Stage 3)
+1. DB migration + types → 2. notification-service + taxonomy → 3. web-push lib + subscribe/unsubscribe → 4. SW + manifest + icons + register + layout meta → 5. push hook + install prompt + offline → 6. header/page/preferences UI → 7. announcements broadcast + admin UI → 8. wire gap routes + cron fix.
 
-```
-Phase 1  →  Fix clone_database.sql (you run this in Supabase SQL editor)
-Phase 2  →  3-file brand rename (Claude executes)
-Phase 3  →  Landing page build (Claude executes)
-Phase 4  →  Dashboard home page (Claude executes)
-Phase 5  →  Sidebar polish (Claude executes)
-          →  git commit + push → Vercel auto-deploys
-```
+## 15. Risks / open items
+- Icon generation needs temp `sharp` or manual assets — confirm at execution.
+- VAPID keys must be generated (`npx web-push generate-vapid-keys`) + added to env before push works.
+- iOS push requires installed PWA (documented in UI).
+- Large broadcasts chunked to respect Vercel function limits.

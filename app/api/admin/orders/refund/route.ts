@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { sendOrderRefundSMS } from '@/lib/sms-service'
+import { createNotification, refundIssuedNotification } from '@/lib/notification-service'
 
 export async function POST(request: NextRequest) {
     try {
@@ -149,19 +150,12 @@ export async function POST(request: NextRequest) {
             throw orderUpdateError
         }
 
-        // 7. Create user notification
-        const { error: notificationError } = await (supabase.from('notifications') as any).insert({
-            user_id: (order as any).user_id,
-            title: 'Order Refunded',
-            message: `Your order ${(order as any).reference_code} has been refunded. GHS ${refundAmount.toFixed(2)} has been credited to your wallet.`,
-            type: 'balance_updated',
-            action_url: `/dashboard/wallet`
-        })
-
-        if (notificationError) {
-            console.error('[RefundOrder] Notification error:', notificationError)
-            // Don't fail the refund if notification fails
-        }
+        // 7. Create user notification (in-app + best-effort web push). Idempotent
+        //    per order ref so a double-submit can't double-notify.
+        await createNotification({
+            userId: (order as any).user_id,
+            ...refundIssuedNotification(refundAmount, (order as any).reference_code),
+        }).catch((e) => console.error('[RefundOrder] Notification error:', e))
 
         // 8. Send SMS notification
         const userPhone = (order as any).users?.phone_number

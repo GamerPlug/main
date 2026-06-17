@@ -5,7 +5,10 @@ export const viewport: Viewport = {
     initialScale: 1,
     maximumScale: 1,
     userScalable: false,
-    themeColor: '#ffffff',
+    themeColor: [
+        { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+        { media: '(prefers-color-scheme: dark)', color: '#0a0a10' },
+    ],
     interactiveWidget: 'resizes-content',
 }
 import { Inter } from 'next/font/google'
@@ -13,6 +16,8 @@ import './globals.css'
 import { AuthProvider } from '@/contexts/auth-context'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/providers/theme-provider'
+import { ServiceWorkerRegister } from '@/components/pwa/sw-register'
+import { InstallPrompt } from '@/components/pwa/install-prompt'
 
 const inter = Inter({
     weight: ['300', '400', '500', '600', '700', '800', '900'],
@@ -26,10 +31,17 @@ export const metadata: Metadata = {
     description: "Gamer Plug Solution powers your connection instantly. Buy fast, affordable data bundles for MTN, Telecel, and AirtelTigo in Ghana. Ghana's #1 trusted data reseller platform.",
     keywords: ['Ghana', 'mobile data', 'airtime', 'MTN', 'Telecel', 'AirtelTigo', 'data bundles', 'gaming', 'internet', 'Gamer Plug'],
     authors: [{ name: 'Gamer Plug Solution' }],
+    applicationName: 'Gamer Plug Solution',
+    manifest: '/manifest.webmanifest',
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: 'black-translucent',
+        title: 'Gamer Plug',
+    },
     icons: {
         icon: '/logo.png',
         shortcut: '/logo.png',
-        apple: '/logo.png',
+        apple: '/icons/apple-touch-icon-180.png',
     },
     openGraph: {
         title: "Gamer Plug Solution - Ghana's #1 Data Hub",
@@ -56,7 +68,9 @@ export default function RootLayout({
                     <AuthProvider>
                         {children}
                         <Toaster position="top-right" richColors />
+                        <InstallPrompt />
                     </AuthProvider>
+                    <ServiceWorkerRegister />
                 </ThemeProvider>
             </body>
         </html>

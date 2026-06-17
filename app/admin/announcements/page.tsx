@@ -9,6 +9,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import {
     Table,
     TableBody,
     TableCell,
@@ -27,6 +34,8 @@ export default function AdminAnnouncementsPage() {
     const [loading, setLoading] = useState(true)
     const [title, setTitle] = useState('')
     const [message, setMessage] = useState('')
+    const [targetRole, setTargetRole] = useState<'all' | 'dealer' | 'agent'>('all')
+    const [sendPush, setSendPush] = useState(true)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     // Edit state
@@ -76,16 +85,15 @@ export default function AdminAnnouncementsPage() {
 
         setIsSubmitting(true)
         try {
-            // First, if we want only ONE active announcement at a time, we could deactivate others.
-            // But for now, let's allow multiple (though UI might visually prioritize latest)
-            // Or typically, creating a new one makes it the active one.
-
+            // 1. Record the announcement (keeps the history list + realtime working).
             const { data, error } = await (supabase
                 .from('system_announcements') as any)
                 .insert({
                     title,
                     message,
-                    is_active: true
+                    is_active: true,
+                    target_role: targetRole,
+                    send_push: sendPush,
                 })
                 .select()
                 .single()
@@ -93,9 +101,23 @@ export default function AdminAnnouncementsPage() {
             if (error) throw error
 
             setAnnouncements([data, ...announcements])
+
+            // 2. Fan out a real notification (+ optional push) to every targeted user.
+            const res = await fetch('/api/admin/announcements/broadcast', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, message, target_role: targetRole, send_push: sendPush }),
+            })
+            const json = await res.json().catch(() => ({}))
+
+            if (res.ok) {
+                toast.success(`Announcement sent to ${json.created ?? 0} user${json.created === 1 ? '' : 's'}`)
+            } else {
+                toast.warning('Announcement saved, but delivery failed: ' + (json.error || 'unknown error'))
+            }
+
             setTitle('')
             setMessage('')
-            toast.success('Announcement posted successfully')
         } catch (error: any) {
             console.error('Error creating announcement:', error)
             toast.error('Failed to post announcement')
@@ -207,7 +229,7 @@ export default function AdminAnnouncementsPage() {
                             Create New Alert
                         </CardTitle>
                         <CardDescription className="text-xs sm:text-sm">
-                            This message will appear as a popup to all users.
+                            Delivered to each targeted user as an in-app notification (and an optional push alert).
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-0">
@@ -233,6 +255,30 @@ export default function AdminAnnouncementsPage() {
                                     onChange={(e) => setMessage(e.target.value)}
                                     required
                                 />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label className="text-sm text-gray-700 dark:text-gray-300">Send to</Label>
+                                    <Select value={targetRole} onValueChange={(v) => setTargetRole(v as any)}>
+                                        <SelectTrigger className="text-sm">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All users</SelectItem>
+                                            <SelectItem value="dealer">Dealers only</SelectItem>
+                                            <SelectItem value="agent">Agents only</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-sm text-gray-700 dark:text-gray-300">Push notification</Label>
+                                    <div className="flex items-center gap-2 h-10">
+                                        <Switch checked={sendPush} onCheckedChange={setSendPush} />
+                                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                                            {sendPush ? 'Also send a push alert' : 'In-app only'}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                             <Button type="submit" className="w-full text-sm" disabled={isSubmitting}>
                                 {isSubmitting ? (

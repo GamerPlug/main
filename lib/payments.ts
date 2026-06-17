@@ -1,6 +1,7 @@
 import { createServerClient } from './supabase'
 import { sendWalletTopupSuccessEmail } from './email-service'
 import { sendWalletTopupSuccessSMS } from './sms-service'
+import { createNotification, paymentSuccessNotification } from './notification-service'
 
 export interface PaymentResult {
     success: boolean
@@ -116,18 +117,12 @@ export async function processCompletedWalletPayment(reference: string, providerM
         console.error('[PaymentProcess] Transaction log error:', txnError)
     }
 
-    // 6. Create notification
-    const { error: notifyError } = await (supabase.from('notifications') as any).insert({
-        user_id: payment.user_id,
-        title: 'Wallet Topped Up',
-        message: `Your wallet has been credited with GHS ${payment.amount.toFixed(2)}`,
-        type: 'payment_success',
-        action_url: '/dashboard/wallet',
-    })
-
-    if (notifyError) {
-        console.error('[PaymentProcess] Notification error:', notifyError)
-    }
+    // 6. Create notification (in-app + best-effort web push). Idempotent via
+    //    the payment reference so a retry never double-notifies.
+    await createNotification({
+        userId: payment.user_id,
+        ...paymentSuccessNotification(payment.amount, reference),
+    }).catch((e) => console.error('[PaymentProcess] Notification error:', e))
 
     // 7. Send email notification
     try {

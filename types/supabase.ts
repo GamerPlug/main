@@ -5,11 +5,57 @@ export type PaymentStatus = 'paid' | 'unpaid' | 'refunded'
 export type TransactionType = 'credit' | 'debit'
 export type TransactionStatus = 'pending' | 'completed' | 'failed'
 export type ComplaintStatus = 'pending' | 'in_review' | 'resolved' | 'rejected'
+// Coarse buckets used for preference gating + UI grouping.
+// Account events (suspend/role/api-key) and security events both live under 'security'.
+export type NotificationCategory =
+    | 'order'
+    | 'payment'
+    | 'security'
+    | 'announcement'
+    | 'marketing'
+    | 'system'
+
+export type NotificationPriority = 'low' | 'normal' | 'high'
+
 export type NotificationType =
-    | 'order_update'
+    // Orders
+    | 'order_placed'
+    | 'order_processing'
+    | 'order_completed'
+    | 'order_failed'
+    | 'order_update' // legacy alias, kept for backward compatibility
+    // Money
     | 'payment_success'
+    | 'refund_issued'
+    | 'balance_credited'
+    | 'balance_debited'
+    | 'balance_updated' // legacy alias
+    | 'low_balance'
+    | 'credit_limit_reached'
+    | 'settlement_due'
+    // Complaints
+    | 'complaint_received'
     | 'complaint_resolved'
-    | 'balance_updated'
+    | 'complaint_rejected'
+    // Account & security
+    | 'account_suspended'
+    | 'account_reactivated'
+    | 'role_upgraded'
+    | 'role_downgraded'
+    | 'security_new_login'
+    | 'security_password_changed'
+    | 'api_key_created'
+    | 'api_key_revoked'
+    // Broadcast & marketing
+    | 'announcement'
+    | 'promo'
+    | 'new_package'
+    | 'price_drop'
+    | 'renewal_reminder'
+    // Admin-facing (sent to admins/sub-admins)
+    | 'admin_new_order'
+    | 'admin_new_registration'
+    // Fallback
     | 'system'
     | string
 
@@ -116,7 +162,32 @@ export interface Notification {
     type: NotificationType
     is_read: boolean
     action_url?: string
+    read_at?: string | null
+    priority?: NotificationPriority
+    metadata?: Record<string, unknown> | null
     created_at: string
+}
+
+export interface PushSubscriptionRecord {
+    id: string
+    user_id: string
+    endpoint: string
+    p256dh: string
+    auth: string
+    user_agent?: string | null
+    created_at: string
+    last_used_at: string
+}
+
+export interface NotificationPreferences {
+    user_id: string
+    order_updates: boolean
+    payments: boolean
+    security: boolean
+    announcements: boolean
+    marketing: boolean
+    push_enabled: boolean
+    updated_at: string
 }
 
 export interface Complaint {
@@ -151,6 +222,8 @@ export interface SystemAnnouncement {
     title: string
     message: string
     is_active: boolean
+    target_role?: 'all' | 'admin' | 'dealer' | 'agent'
+    send_push?: boolean
     created_at: string
     updated_at: string
 }

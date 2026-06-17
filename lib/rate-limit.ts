@@ -5,6 +5,7 @@ let _redis: Redis | null = null
 let _paymentRatelimit: Ratelimit | null = null
 let _bulkOrderRatelimit: Ratelimit | null = null
 let _welcomeEmailRatelimit: Ratelimit | null = null
+let _pushSubscribeRatelimit: Ratelimit | null = null
 
 export function getRedis(): Redis {
     if (!_redis) {
@@ -25,6 +26,19 @@ export function resetRatelimitSingletons() {
     _paymentRatelimit = null
     _bulkOrderRatelimit = null
     _welcomeEmailRatelimit = null
+    _pushSubscribeRatelimit = null
+}
+
+// 20 push subscribe/unsubscribe calls per user per minute (SW re-registration churn)
+export function getPushSubscribeRatelimit(): Ratelimit {
+    if (!_pushSubscribeRatelimit) {
+        _pushSubscribeRatelimit = new Ratelimit({
+            redis: getRedis(),
+            limiter: Ratelimit.slidingWindow(20, '1 m'),
+            prefix: 'gamerplug:push:subscribe',
+        })
+    }
+    return _pushSubscribeRatelimit
 }
 
 // 3 welcome-email/SMS sends per IP per 10 minutes (this endpoint is

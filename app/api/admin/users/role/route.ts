@@ -3,6 +3,11 @@ import { createServerClient } from '@/lib/supabase'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { sendRoleUpgradeSuccessSMS } from '@/lib/sms-service'
+import { createNotification, roleChangeNotification } from '@/lib/notification-service'
+
+const ROLE_RANK: Record<string, number> = {
+    user: 1, agent: 2, 'super agent': 2.5, dealer: 3, 'super dealer': 3.5, platinum: 3.8, 'sub-admin': 4, admin: 5,
+}
 
 export async function POST(request: NextRequest) {
     try {
@@ -39,6 +44,14 @@ export async function POST(request: NextRequest) {
         // Service role client to bypass RLS
         const supabase = createServerClient()
 
+        // Capture the previous role so we can tell the user up- vs down-grade.
+        const { data: prevUser } = await (supabase
+            .from('users') as any)
+            .select('role')
+            .eq('id', userId)
+            .single()
+        const previousRole = prevUser?.role
+
         const updateData: any = { role }
 
         const { error: updateError } = await (supabase
@@ -49,6 +62,15 @@ export async function POST(request: NextRequest) {
         if (updateError) {
             console.error('[AdminRoleUpdate] Update error:', updateError)
             throw updateError
+        }
+
+        // Notify the user of their role change (in-app + best-effort push).
+        if (previousRole !== role) {
+            const direction = (ROLE_RANK[role] ?? 0) >= (ROLE_RANK[previousRole] ?? 0) ? 'upgraded' : 'downgraded'
+            await createNotification({
+                userId,
+                ...roleChangeNotification(role, direction),
+            }).catch((e) => console.error('[AdminRoleUpdate] Notification error:', e))
         }
 
         // Send SMS notification if user was upgraded to agent or dealer

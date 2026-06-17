@@ -3,6 +3,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { generateKey, hashKey } from '@/lib/api-auth'
 import { createServerClient } from '@/lib/supabase'
+import { createNotification, apiKeyNotification } from '@/lib/notification-service'
 
 async function getSession() {
     const cookieStore = await cookies()
@@ -77,6 +78,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    await createNotification({
+        userId: session.user.id,
+        ...apiKeyNotification('created', name.trim()),
+    }).catch((e) => console.error('[api-keys POST] Notification error:', e))
+
     return NextResponse.json({
         ...key,
         plain_text_key: newKey // Only returned once!
@@ -96,6 +102,15 @@ export async function DELETE(request: NextRequest) {
     if (!id) return NextResponse.json({ error: 'Key ID is required' }, { status: 400 })
 
     const supabase = createServerClient()
+
+    // Capture the key name (scoped to owner) before deleting, for the notification.
+    const { data: existingKey } = await supabase
+        .from('api_keys')
+        .select('name')
+        .eq('id', id)
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+
     const { error } = await supabase
         .from('api_keys')
         .delete()
@@ -103,6 +118,13 @@ export async function DELETE(request: NextRequest) {
         .eq('user_id', session.user.id) // scoped to owner — service role can delete any row
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    if (existingKey) {
+        await createNotification({
+            userId: session.user.id,
+            ...apiKeyNotification('revoked', (existingKey as any).name || 'Unnamed key'),
+        }).catch((e) => console.error('[api-keys DELETE] Notification error:', e))
+    }
 
     return NextResponse.json({ success: true })
 }

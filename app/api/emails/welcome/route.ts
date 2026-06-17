@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sendWelcomeEmail, sendAdminNewUserAlert } from '@/lib/email-service'
 import { sendWelcomeSMS } from '@/lib/sms-service'
 import { getWelcomeEmailRatelimit, resetRatelimitSingletons } from '@/lib/rate-limit'
+import { notifyAdmins, adminNewRegistrationNotification } from '@/lib/notification-service'
 
 /**
  * API route to send welcome email after user signup.
@@ -59,6 +60,11 @@ export async function POST(request: NextRequest) {
             email,
             phoneNumber: phoneNumber || 'Not provided'
         }).catch((err: Error) => console.error('[WelcomeEmail] Admin notification failed:', err))
+
+        // In-app + push admin alert about the new registration (non-blocking)
+        notifyAdmins(
+            adminNewRegistrationNotification(`${firstName} ${lastName || ''}`.trim(), email),
+        ).catch((err: Error) => console.error('[WelcomeEmail] Admin in-app notification failed:', err))
 
         return NextResponse.json({
             success: true,

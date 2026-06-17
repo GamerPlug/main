@@ -17,16 +17,22 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { roleConfig } from '@/lib/roles'
 import { supabase } from '@/lib/supabase'
-import { Menu, Sun, Moon, Bell, User, Settings, LogOut } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Menu, Sun, Moon, Bell, User, Settings, LogOut, CheckCheck, ArrowRight, SlidersHorizontal } from 'lucide-react'
+import { cn, formatRelativeTime } from '@/lib/utils'
 import { useTheme } from 'next-themes'
+import { toast } from 'sonner'
+import { NotificationIcon } from '@/components/notifications/notification-icon'
+import type { Notification } from '@/types/supabase'
+import { useRouter } from 'next/navigation'
 
 export function DashboardHeader() {
     const { dbUser, signOut, isAdmin, isSubAdmin } = useAuth()
     const { toggleSidebar } = useUI()
     const { theme, setTheme } = useTheme()
+    const router = useRouter()
     const [mounted, setMounted] = useState(false)
     const [unreadCount, setUnreadCount] = useState(0)
+    const [recent, setRecent] = useState<Notification[]>([])
 
     // Avoid hydration mismatch
     useEffect(() => {
@@ -35,18 +41,78 @@ export function DashboardHeader() {
 
     useEffect(() => {
         if (dbUser) {
-            fetchUnreadNotifications()
+            fetchNotifications()
         }
     }, [dbUser])
 
-    const fetchUnreadNotifications = async () => {
-        const { count } = await supabase
-            .from('notifications')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', dbUser?.id as any)
-            .eq('is_read', false)
+    // Live updates: keep the badge + preview fresh and surface a toast on arrival.
+    useEffect(() => {
+        if (!dbUser) return
+        const channel = supabase
+            .channel(`header-notifications-${dbUser.id}`)
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${dbUser.id}` },
+                (payload) => {
+                    const n = payload.new as Notification
+                    toast(n.title, {
+                        description: n.message,
+                        action: n.action_url
+                            ? { label: 'View', onClick: () => router.push(n.action_url as string) }
+                            : undefined,
+                    })
+                    fetchNotifications()
+                },
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${dbUser.id}` },
+                () => fetchNotifications(),
+            )
+            .subscribe()
 
+        return () => {
+            supabase.removeChannel(channel)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dbUser])
+
+    const fetchNotifications = async () => {
+        if (!dbUser) return
+        const [{ count }, { data }] = await Promise.all([
+            supabase
+                .from('notifications')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', dbUser.id as any)
+                .eq('is_read', false),
+            supabase
+                .from('notifications')
+                .select('*')
+                .eq('user_id', dbUser.id as any)
+                .order('created_at', { ascending: false })
+                .limit(6),
+        ])
         setUnreadCount(count || 0)
+        setRecent((data as Notification[]) || [])
+    }
+
+    const markAllRead = async () => {
+        if (!dbUser) return
+        await (supabase.from('notifications') as any)
+            .update({ is_read: true, read_at: new Date().toISOString() })
+            .eq('user_id', dbUser.id as any)
+            .eq('is_read', false)
+        setUnreadCount(0)
+        setRecent((prev) => prev.map((n) => ({ ...n, is_read: true })))
+    }
+
+    const openNotification = async (n: Notification) => {
+        if (!n.is_read) {
+            await (supabase.from('notifications') as any)
+                .update({ is_read: true, read_at: new Date().toISOString() })
+                .eq('id', n.id)
+        }
+        router.push(n.action_url || '/dashboard/notifications')
     }
 
     const getInitials = () => {
@@ -112,22 +178,91 @@ export function DashboardHeader() {
                     </Badge>
 
                     {/* Notifications */}
-                    <Link href="/dashboard/notifications">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="relative text-foreground/60 hover:text-foreground hover:bg-muted transition-colors h-10 w-10 rounded-full"
-                        >
-                            <Bell className="w-5 h-5" />
-                            {unreadCount > 0 && (
-                                <span className={cn(
-                                    "absolute top-1.5 right-1.5 w-4 h-4 text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-background shadow-md bg-primary text-primary-foreground animate-pulse"
-                                )}>
-                                    {unreadCount > 9 ? '9+' : unreadCount}
-                                </span>
-                            )}
-                        </Button>
-                    </Link>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="relative text-foreground/60 hover:text-foreground hover:bg-muted transition-colors h-10 w-10 rounded-full"
+                            >
+                                <Bell className="w-5 h-5" />
+                                {unreadCount > 0 && (
+                                    <span className={cn(
+                                        "absolute top-1.5 right-1.5 min-w-4 h-4 px-1 text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-background shadow-md bg-primary text-primary-foreground animate-pulse"
+                                    )}>
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </span>
+                                )}
+                                <span className="sr-only">Notifications</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-[22rem] glass-card border-white/10 mt-2 p-0 overflow-hidden" align="end" forceMount>
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
+                                <p className="text-sm font-black text-foreground">
+                                    Notifications {unreadCount > 0 && <span className="text-primary">({unreadCount})</span>}
+                                </p>
+                                <div className="flex items-center gap-1">
+                                    {unreadCount > 0 && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 rounded-lg text-foreground/60 hover:text-foreground"
+                                            onClick={markAllRead}
+                                            title="Mark all as read"
+                                        >
+                                            <CheckCheck className="w-4 h-4" />
+                                        </Button>
+                                    )}
+                                    <Link href="/dashboard/notifications/preferences" title="Notification settings">
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-foreground/60 hover:text-foreground">
+                                            <SlidersHorizontal className="w-4 h-4" />
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </div>
+
+                            <div className="max-h-[22rem] overflow-y-auto">
+                                {recent.length === 0 ? (
+                                    <div className="px-4 py-10 text-center">
+                                        <Bell className="w-8 h-8 text-foreground/20 mx-auto mb-2" />
+                                        <p className="text-sm font-medium text-foreground/50">You're all caught up</p>
+                                    </div>
+                                ) : (
+                                    recent.map((n) => (
+                                        <button
+                                            key={n.id}
+                                            onClick={() => openNotification(n)}
+                                            className={cn(
+                                                'w-full text-left flex items-start gap-3 px-4 py-3 border-b border-border/40 hover:bg-muted/60 transition-colors',
+                                                !n.is_read && 'bg-primary/[0.04]'
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border',
+                                                !n.is_read ? 'bg-primary/10 border-primary/20' : 'bg-muted border-border/50'
+                                            )}>
+                                                <NotificationIcon type={n.type} className="w-4 h-4" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={cn('text-[13px] leading-snug truncate', !n.is_read ? 'font-bold text-foreground' : 'font-semibold text-foreground/80')}>
+                                                    {n.title}
+                                                </p>
+                                                <p className="text-xs text-foreground/55 line-clamp-2 leading-snug mt-0.5">{n.message}</p>
+                                                <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/35 mt-1">{formatRelativeTime(n.created_at)}</p>
+                                            </div>
+                                            {!n.is_read && <span className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />}
+                                        </button>
+                                    ))
+                                )}
+                            </div>
+
+                            <Link href="/dashboard/notifications" className="block">
+                                <div className="px-4 py-3 text-center text-xs font-bold text-primary hover:bg-muted/60 transition-colors flex items-center justify-center gap-1.5">
+                                    See all notifications <ArrowRight className="w-3.5 h-3.5" />
+                                </div>
+                            </Link>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
 
                     {/* User Menu */}
                     <DropdownMenu>

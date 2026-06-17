@@ -2,6 +2,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { createNotification, accountStatusNotification } from '@/lib/notification-service'
 
 export async function POST(request: Request) {
     try {
@@ -74,6 +75,14 @@ export async function POST(request: Request) {
         }
 
         console.log(`[Admin] User ${userId} status updated to ${status} by ${session.user.id}`)
+
+        // Notify the affected user (in-app + best-effort push) for suspend/reactivate.
+        if (status === 'suspended' || status === 'active') {
+            await createNotification({
+                userId,
+                ...accountStatusNotification(status === 'suspended' ? 'suspended' : 'reactivated'),
+            }).catch((e) => console.error('[Admin] Status notification error:', e))
+        }
 
         return NextResponse.json({ success: true })
 

@@ -4,6 +4,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { sendWalletTopupSuccessEmail } from '@/lib/email-service'
 import { sendWalletTopupSuccessSMS } from '@/lib/sms-service'
+import { createNotification, balanceUpdatedNotification } from '@/lib/notification-service'
 
 export async function POST(request: NextRequest) {
     try {
@@ -146,14 +147,11 @@ export async function POST(request: NextRequest) {
             console.error('[AdminWalletAdjustment] Transaction log error:', transError)
         }
 
-        // 4. Send notification
-        await (supabase.from('notifications') as any).insert({
-            user_id: userId,
-            title: isCredit ? 'Wallet Credited' : 'Wallet Debited',
-            message: `Your wallet has been ${isCredit ? 'credited' : 'debited'} with GHS ${adjustmentAmount.toFixed(2)}. ${description || ''}`,
-            type: 'balance_updated',
-            is_read: false
-        })
+        // 4. Send notification (in-app + best-effort web push)
+        await createNotification({
+            userId,
+            ...balanceUpdatedNotification(adjustmentAmount, isCredit ? 'credit' : 'debit', description || undefined),
+        }).catch((e) => console.error('[AdminWalletAdjustment] Notification error:', e))
 
         if (type === 'credit') {
             const { data: user } = await supabase
