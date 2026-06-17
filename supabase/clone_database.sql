@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS public.download_batches (
     network TEXT,
     order_count INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    created_by UUID REFERENCES auth.users(id),
+    created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     idempotency_key TEXT UNIQUE
 );
 
@@ -93,8 +93,8 @@ CREATE TABLE IF NOT EXISTS public.download_batches (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.orders (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.users(id),
-    package_id UUID REFERENCES public.data_packages(id),
+    user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    package_id UUID REFERENCES public.data_packages(id) ON DELETE SET NULL,
     phone_number TEXT NOT NULL,
     network TEXT,
     size TEXT,
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
     reference_code TEXT,
     fulfillment_method TEXT DEFAULT 'auto',
     idempotency_key TEXT UNIQUE,
-    download_batch_id UUID REFERENCES public.download_batches(id),
+    download_batch_id UUID REFERENCES public.download_batches(id) ON DELETE SET NULL,
     email TEXT,
     customer_phone TEXT,
     provider_ref TEXT,
@@ -123,8 +123,8 @@ ALTER TABLE public.orders ALTER COLUMN user_id DROP NOT NULL;
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.wallet_payments (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    wallet_id UUID REFERENCES public.wallets(id),
-    user_id UUID REFERENCES public.users(id),
+    wallet_id UUID REFERENCES public.wallets(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
     reference TEXT UNIQUE NOT NULL,
     amount NUMERIC NOT NULL,
     fee NUMERIC DEFAULT 0,
@@ -142,8 +142,8 @@ CREATE TABLE IF NOT EXISTS public.wallet_payments (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.wallet_transactions (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    wallet_id UUID REFERENCES public.wallets(id),
-    user_id UUID REFERENCES public.users(id),
+    wallet_id UUID REFERENCES public.wallets(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
     type TEXT NOT NULL,
     amount NUMERIC NOT NULL,
     description TEXT,
@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS public.wallet_transactions (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.notifications (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.users(id),
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     message TEXT,
     type TEXT,
