@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import * as XLSX from 'xlsx'
 import { useAuth } from '@/contexts/auth-context'
 import { supabase } from '@/lib/supabase'
 import { formatCurrency, cn } from '@/lib/utils'
@@ -185,8 +184,11 @@ export default function DataPackagesPage() {
     const parseExcelFile = (file: File): Promise<{ lineNumber: number; phoneNumber: string; volume: number }[]> =>
         new Promise((resolve, reject) => {
             const reader = new FileReader()
-            reader.onload = e => {
+            reader.onload = async e => {
                 try {
+                    // Lazy-load xlsx (~hundreds of KB) only when an Excel file is actually parsed,
+                    // so it never bloats the initial page load.
+                    const XLSX = await import('xlsx')
                     const workbook = XLSX.read(e.target?.result, { type: 'binary' })
                     const sheet = workbook.Sheets[workbook.SheetNames[0]]
                     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][]
