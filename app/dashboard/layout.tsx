@@ -8,9 +8,9 @@ import { UIProvider } from '@/contexts/ui-context'
 import { DashboardSidebar } from '@/components/dashboard/sidebar'
 import { DashboardHeader } from '@/components/dashboard/header'
 import { Skeleton } from '@/components/ui/skeleton'
-import { WhatsAppButton } from '@/components/whatsapp-button'
 import { SuspendedAccount } from '@/components/dashboard/SuspendedAccount'
 import { SettlementOverlay } from '@/components/dashboard/SettlementOverlay'
+import { RefreshButton } from '@/components/pwa/refresh-button'
 
 
 export default function DashboardLayout({
@@ -61,7 +61,6 @@ export default function DashboardLayout({
                             <SuspendedAccount />
                         </main>
                     </div>
-                    <WhatsAppButton />
                 </div>
             </UIProvider>
         )
@@ -84,7 +83,6 @@ export default function DashboardLayout({
                         </main>
                     </div>
                     <SettlementOverlay amount={(Array.isArray(dbUser.wallets) ? dbUser.wallets[0]?.balance : (dbUser.wallets as any)?.balance) || 0} />
-                    <WhatsAppButton />
                 </div>
             </UIProvider>
         )
@@ -106,7 +104,7 @@ export default function DashboardLayout({
                         {children}
                     </main>
                 </div>
-                <WhatsAppButton />
+                <RefreshButton />
             </div>
         </UIProvider>
     )
