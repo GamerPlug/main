@@ -18,6 +18,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { ServiceWorkerRegister } from '@/components/pwa/sw-register'
 import { InstallPrompt } from '@/components/pwa/install-prompt'
+import { GlobalLoader } from '@/components/ui/global-loader'
 
 const inter = Inter({
     weight: ['300', '400', '500', '600', '700', '800', '900'],
@@ -69,6 +70,7 @@ export default function RootLayout({
                         {children}
                         <Toaster position="top-right" richColors />
                         <InstallPrompt />
+                        <GlobalLoader />
                     </AuthProvider>
                     <ServiceWorkerRegister />
                 </ThemeProvider>
