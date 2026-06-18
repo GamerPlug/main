@@ -9,7 +9,7 @@ import { ChevronLeft, Copy, Check, Globe, Lock, Zap, Code2, Server, Activity, Cl
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
-const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://gamerplug.com').replace(/\/$/, '')
+const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://gamerpluggh.com').replace(/\/$/, '')
 
 const METHOD_STYLES: Record<string, string> = {
     GET: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20',

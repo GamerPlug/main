@@ -1,32 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { generateKey, hashKey } from '@/lib/api-auth'
 import { createServerClient } from '@/lib/supabase'
+import { requireUser } from '@/lib/admin-auth'
 import { createNotification, apiKeyNotification } from '@/lib/notification-service'
 
-async function getSession() {
-    const cookieStore = await cookies()
-    const supabase = createRouteHandlerClient({
-        // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
-        cookies: () => cookieStore
-    })
-    const { data: { session }, error } = await supabase.auth.getSession()
-    return { session, error }
-}
-
 export async function GET(request: NextRequest) {
-    const { session, error: sessionError } = await getSession()
-
-    if (sessionError || !session?.user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await requireUser()
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
     const supabase = createServerClient()
     const { data: keys, error } = await supabase
         .from('api_keys')
         .select('id, name, key_preview, is_active, rate_limit_override, last_used_at, created_at')
-        .eq('user_id', session.user.id)
+        .eq('user_id', auth.userId)
         .order('created_at', { ascending: false })
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -35,10 +23,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-    const { session, error: sessionError } = await getSession()
-
-    if (sessionError || !session?.user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await requireUser()
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
     let body: any
@@ -63,7 +50,7 @@ export async function POST(request: NextRequest) {
     const { data: key, error } = await supabase
         .from('api_keys')
         .insert({
-            user_id: session.user.id,
+            user_id: auth.userId,
             key_hash: hashedKey,
             key_prefix: prefix,
             key_preview: preview,
@@ -79,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     await createNotification({
-        userId: session.user.id,
+        userId: auth.userId,
         ...apiKeyNotification('created', name.trim()),
     }).catch((e) => console.error('[api-keys POST] Notification error:', e))
 
@@ -90,10 +77,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-    const { session, error: sessionError } = await getSession()
-
-    if (sessionError || !session?.user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await requireUser()
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
     const { searchParams } = new URL(request.url)
@@ -108,20 +94,20 @@ export async function DELETE(request: NextRequest) {
         .from('api_keys')
         .select('name')
         .eq('id', id)
-        .eq('user_id', session.user.id)
+        .eq('user_id', auth.userId)
         .maybeSingle()
 
     const { error } = await supabase
         .from('api_keys')
         .delete()
         .eq('id', id)
-        .eq('user_id', session.user.id) // scoped to owner — service role can delete any row
+        .eq('user_id', auth.userId) // scoped to owner — service role can delete any row
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     if (existingKey) {
         await createNotification({
-            userId: session.user.id,
+            userId: auth.userId,
             ...apiKeyNotification('revoked', (existingKey as any).name || 'Unnamed key'),
         }).catch((e) => console.error('[api-keys DELETE] Notification error:', e))
     }

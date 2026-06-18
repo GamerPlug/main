@@ -2,9 +2,9 @@
 
 A premium high-speed data and airtime platform for Ghana, built with Next.js 15, Tailwind CSS, and Supabase.
 
-## 🎮 About
+## 📡 About
 
-**GAMER PLUG SOLUTION** is Ghana's #1 High-Speed Data & Gaming Hub — Powering Your Connection Instantly. Buy affordable data bundles for MTN, Telecel, and AirtelTigo instantly with a modern cyber-tech user experience.
+**GAMER PLUG SOLUTION** is Ghana's #1 High-Speed Data Reselling & Supplier Platform — Powering Your Connection Instantly. Buy affordable data bundles for MTN, Telecel, and AirtelTigo instantly with a modern cyber-tech user experience.
 
 ## Features
 

@@ -26,7 +26,6 @@ interface SettingsState {
     whatsappGroupLink: string
     whatsappChannelLink: string
     autoFulfillment: boolean
-    guestPurchaseEnabled: boolean
     walletTopupEnabled: boolean
     pageAccessDashboard: boolean
     pageAccessDataPackages: boolean
@@ -51,7 +50,6 @@ const DEFAULTS: SettingsState = {
     whatsappGroupLink: '',
     whatsappChannelLink: '',
     autoFulfillment: true,
-    guestPurchaseEnabled: true,
     walletTopupEnabled: true,
     pageAccessDashboard: true,
     pageAccessDataPackages: true,
@@ -78,7 +76,6 @@ function settingsFromMap(map: Record<string, string>): SettingsState {
         whatsappChannelLink: map.whatsapp_channel_link ?? '',
         // Bug fix: use !== 'false' consistently so missing keys default to true
         autoFulfillment: map.auto_fulfillment_enabled !== 'false',
-        guestPurchaseEnabled: map.guest_purchase_enabled !== 'false',
         walletTopupEnabled: map.wallet_topup_enabled !== 'false',
         pageAccessDashboard: map.page_access_dashboard !== 'false',
         pageAccessDataPackages: map.page_access_data_packages !== 'false',
@@ -105,7 +102,6 @@ function settingsToUpsert(s: SettingsState) {
         { key: 'whatsapp_group_link', value: s.whatsappGroupLink },
         { key: 'whatsapp_channel_link', value: s.whatsappChannelLink },
         { key: 'auto_fulfillment_enabled', value: String(s.autoFulfillment) },
-        { key: 'guest_purchase_enabled', value: String(s.guestPurchaseEnabled) },
         { key: 'wallet_topup_enabled', value: String(s.walletTopupEnabled) },
         { key: 'page_access_dashboard', value: String(s.pageAccessDashboard) },
         { key: 'page_access_data_packages', value: String(s.pageAccessDataPackages) },
@@ -343,13 +339,6 @@ export default function AdminSettingsPage() {
                             <CardDescription>Enable or disable user-facing platform features</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            <ToggleRow
-                                id="guest-purchase"
-                                label="Guest Purchase"
-                                description="Allow purchases without an account"
-                                checked={form.guestPurchaseEnabled}
-                                onCheckedChange={v => set('guestPurchaseEnabled', v)}
-                            />
                             <ToggleRow
                                 id="wallet-topup"
                                 label="Wallet Top-up"

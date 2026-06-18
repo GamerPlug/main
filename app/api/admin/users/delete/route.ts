@@ -1,7 +1,6 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export async function POST(request: Request) {
     try {
@@ -14,35 +13,14 @@ export async function POST(request: Request) {
             )
         }
 
-        // 1. Verify verify requester is admin
-        const cookieStore = await cookies()
-        // @ts-expect-error - auth-helpers types conflict with Next.js 15
-        const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-        const { data: { session } } = await supabase.auth.getSession()
-
-        if (!session) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            )
-        }
-
-        // Check if requester is admin
-        const { data: requesterData, error: requesterError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', session.user.id)
-            .single()
-
-        if (requesterError || (requesterData?.role !== 'admin' && requesterData?.role !== 'sub-admin')) {
-            return NextResponse.json(
-                { error: 'Unauthorized - Admin access required' },
-                { status: 403 }
-            )
+        // 1. Verify requester is admin (server-verified getUser())
+        const auth = await requireAdmin()
+        if (!auth.ok) {
+            return NextResponse.json({ error: auth.error }, { status: auth.status })
         }
 
         // Prevent self-deletion
-        if (userId === session.user.id) {
+        if (userId === auth.userId) {
             return NextResponse.json(
                 { error: 'Cannot delete your own account' },
                 { status: 400 }

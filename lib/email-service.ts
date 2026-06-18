@@ -430,7 +430,7 @@ function generatePremiumTemplate(title: string, content: string, accentColor: st
                         <span class="logo-text">K</span>
                     </div>
                     <div className="brand-name">GAMER PLUG</div>
-                    <div className="brand-tagline">Premium Data & Gaming Solutions</div>
+                    <div className="brand-tagline">Premium Data Reselling Solutions</div>
                 </div>
             </div>
             <div class="content">
@@ -448,7 +448,7 @@ function generatePremiumTemplate(title: string, content: string, accentColor: st
                 </p>
                 <p class="footer-copyright">
                     © ${new Date().getFullYear()} GAMER PLUG. All rights reserved.<br>
-                    Ghana's Premium Data & Gaming Platform
+                    Ghana's Premium Data Reselling Platform
                 </p>
             </div>
         </div>
@@ -474,7 +474,7 @@ export async function sendWelcomeEmail(
         
         <p className="message-text">
             Thank you for joining <strong>GAMER PLUG</strong> – Ghana's most trusted 
-            premium data reseller and gaming platform. Your account has been successfully created and 
+            premium data reseller and supplier platform. Your account has been successfully created and
             you're now part of an exclusive community.
         </p>
         

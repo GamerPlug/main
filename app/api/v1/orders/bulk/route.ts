@@ -133,39 +133,59 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // 6. Calculate total cost
+        // 5b. Idempotency — skip items whose key already produced an order for this
+        //     user (prevents double-charge on client retries).
+        const providedKeys = validatedItems
+            .map(o => o.idempotencyKey)
+            .filter((k): k is string => typeof k === 'string' && k.trim() !== '')
+
+        const existingByKey = new Map<string, any>()
+        if (providedKeys.length > 0) {
+            const { data: existingOrders } = await supabase
+                .from('orders')
+                .select('id, reference_code, status, network, size, amount, phone_number, idempotency_key')
+                .eq('user_id', userId)
+                .in('idempotency_key', providedKeys)
+            for (const o of (existingOrders || []) as any[]) {
+                if (o.idempotency_key) existingByKey.set(o.idempotency_key, o)
+            }
+        }
+
+        const itemsToCreate = validatedItems.filter(
+            it => !(it.idempotencyKey && existingByKey.has(it.idempotencyKey))
+        )
+
+        // 6. Calculate total cost (only for items we will actually create)
         let totalCost = 0
-        for (const item of validatedItems) {
+        for (const item of itemsToCreate) {
             const pkg = pkgMap.get(item.packageId) as any
             totalCost += resolvePackagePrice(pkg, role, priceOverrides)
         }
 
-        // 7. Single atomic wallet deduction for total
-        const { data: deductResult, error: deductError } = await supabase.rpc('deduct_wallet', {
-            p_user_id: userId,
-            p_amount: totalCost,
-        })
+        // 7. Single atomic wallet deduction (skip entirely if everything was idempotent)
+        let newBalance: number | null = null
+        let walletId: string | null = null
+        if (totalCost > 0) {
+            const { data: deductResult, error: deductError } = await supabase.rpc('deduct_wallet', {
+                p_user_id: userId,
+                p_amount: totalCost,
+            })
 
-        if (deductError || !(deductResult as any)?.success) {
-            const msg = (deductResult as any)?.error || deductError?.message || 'Wallet deduction failed'
-            return NextResponse.json({ error: msg }, { status: 400 })
+            if (deductError || !(deductResult as any)?.success) {
+                const msg = (deductResult as any)?.error || deductError?.message || 'Wallet deduction failed'
+                return NextResponse.json({ error: msg }, { status: 400 })
+            }
+
+            newBalance = (deductResult as any).new_balance
+            walletId = (deductResult as any).wallet_id
         }
 
-        const newBalance = (deductResult as any).new_balance
-        const walletId = (deductResult as any).wallet_id
-
-        // 8. Create all orders
-        const orderInserts: any[] = []
-        const refCodes: string[] = []
-
-        for (const item of validatedItems) {
+        // 8. Create the new orders
+        const orderInserts = itemsToCreate.map(item => {
             const pkg = pkgMap.get(item.packageId) as any
             const price = resolvePackagePrice(pkg, role, priceOverrides)
-
             const refCode = generateReferenceCode()
-            refCodes.push(refCode)
-
-            orderInserts.push({
+            return {
                 user_id: userId,
                 package_id: item.packageId,
                 phone_number: item.phoneNumber,
@@ -180,44 +200,57 @@ export async function POST(request: NextRequest) {
                 reference: refCode,
                 fulfillment_method: 'auto',
                 idempotency_key: item.idempotencyKey || null,
-            })
+            }
+        })
+
+        let createdOrders: any[] = []
+        if (orderInserts.length > 0) {
+            const { data, error: orderError } = await (supabase
+                .from('orders') as any)
+                .insert(orderInserts)
+                .select('id, reference_code, status, network, size, amount, phone_number')
+
+            if (orderError) {
+                console.error('[bulk] Order insert error:', orderError)
+                if (totalCost > 0) {
+                    await supabase.rpc('refund_wallet', { p_user_id: userId, p_amount: totalCost })
+                }
+                return NextResponse.json({ error: 'Failed to create orders. Wallet refunded.' }, { status: 500 })
+            }
+            createdOrders = (data as any[]) || []
+
+            // 9. Record wallet transactions for the newly created orders
+            if (walletId) {
+                const txInserts = createdOrders.map((order: any) => ({
+                    wallet_id: walletId,
+                    user_id: userId,
+                    type: 'debit',
+                    amount: order.amount,
+                    description: `Bulk API order: ${order.size} for ${order.phone_number}`,
+                    reference: order.reference_code,
+                    source: 'api_bulk',
+                    status: 'completed',
+                }))
+                await (supabase.from('wallet_transactions') as any).insert(txInserts)
+            }
         }
 
-        const { data: createdOrders, error: orderError } = await (supabase
-            .from('orders') as any)
-            .insert(orderInserts)
-            .select('id, reference_code, status, network, size, amount, phone_number')
-
-        if (orderError) {
-            console.error('[bulk] Order insert error:', orderError)
-            await supabase.rpc('refund_wallet', { p_user_id: userId, p_amount: totalCost })
-            return NextResponse.json({ error: 'Failed to create orders. Wallet refunded.' }, { status: 500 })
-        }
-
-        // 9. Record wallet transactions
-        const txInserts = (createdOrders as any[]).map((order: any, i: number) => ({
-            wallet_id: walletId,
-            user_id: userId,
-            type: 'debit',
-            amount: order.amount,
-            description: `Bulk API order: ${order.size} for ${order.phone_number}`,
-            reference: order.reference_code,
-            source: 'api_bulk',
-            status: 'completed',
-        }))
-
-        await (supabase.from('wallet_transactions') as any).insert(txInserts)
+        // Merge idempotent hits with newly created orders for the response.
+        const idempotentOrders = [...existingByKey.values()]
+        const allOrders = [...idempotentOrders, ...createdOrders]
 
         // MTN and other networks are fulfilled via their respective cron jobs.
 
         return NextResponse.json({
             success: true,
             summary: {
-                total_orders: (createdOrders as any[]).length,
+                total_orders: allOrders.length,
+                created: createdOrders.length,
+                idempotent_hits: idempotentOrders.length,
                 total_charged: totalCost,
                 new_balance: newBalance,
             },
-            orders: (createdOrders as any[]).map((o: any) => ({
+            orders: allOrders.map((o: any) => ({
                 id: o.id,
                 reference_code: o.reference_code,
                 status: o.status,

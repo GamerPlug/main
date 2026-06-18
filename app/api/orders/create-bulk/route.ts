@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { generateReferenceCode } from '@/lib/utils'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { requireUser } from '@/lib/admin-auth'
 import { sendAdminNewOrderAlert } from '@/lib/email-service'
 import { sendOrderSuccessSMS, sendAdminAgentOrderAlert } from '@/lib/sms-service'
 import { validateGhanaianPhone } from '@/lib/phone-validation'
@@ -26,18 +25,12 @@ interface OrderResult {
 
 export async function POST(request: NextRequest) {
     try {
-        const cookieStore = await cookies()
-        const supabaseUserClient = createRouteHandlerClient({
-            // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
-            cookies: () => cookieStore
-        })
-        const { data: { session }, error: sessionError } = await supabaseUserClient.auth.getSession()
-
-        if (sessionError || !session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        const auth = await requireUser()
+        if (!auth.ok) {
+            return NextResponse.json({ error: auth.error }, { status: auth.status })
         }
 
-        const userId = session.user.id
+        const userId = auth.userId
 
         let body: { orders: BulkOrderItem[] }
         try {

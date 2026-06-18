@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient } from '@/lib/supabase-server'
+import { requireAdmin } from '@/lib/admin-auth'
 import { createClient } from '@supabase/supabase-js'
 
 // Create admin client directly since createServerClient might not be exported customly
@@ -15,21 +15,11 @@ const supabaseAdmin = createClient(
 )
 
 export async function GET(request: NextRequest) {
-    const supabase = createRouteClient()
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await requireAdmin()
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
-
-    // Check if user is admin
-    const { data: user } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', session.user.id)
-        .single()
-
-    if ((user as any)?.role !== 'admin') {
+    if (auth.role !== 'admin') {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -47,20 +37,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-    const supabase = createRouteClient()
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await requireAdmin()
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
-
-    const { data: user } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', session.user.id)
-        .single()
-
-    if ((user as any)?.role !== 'admin') {
+    if (auth.role !== 'admin') {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -82,20 +63,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-    const supabase = createRouteClient()
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await requireAdmin()
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
-
-    const { data: user } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', session.user.id)
-        .single()
-
-    if ((user as any)?.role !== 'admin') {
+    if (auth.role !== 'admin') {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -122,20 +94,11 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-    const supabase = createRouteClient()
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await requireAdmin()
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
-
-    const { data: user } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', session.user.id)
-        .single()
-
-    if ((user as any)?.role !== 'admin') {
+    if (auth.role !== 'admin') {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

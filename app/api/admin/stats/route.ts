@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { requireAdmin } from '@/lib/admin-auth'
 
 /**
  * Admin dashboard stats.
@@ -13,29 +14,22 @@ import { cookies } from 'next/headers'
  */
 export async function GET(request: NextRequest) {
     try {
+        // Verified admin (full admin only — the stats RPC requires 'admin').
+        const auth = await requireAdmin()
+        if (!auth.ok) {
+            return NextResponse.json({ error: auth.error }, { status: auth.status })
+        }
+        if (auth.role !== 'admin') {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+
+        // --- Primary: aggregated RPC (scales; self-guards on caller role) ---
+        // Call with the user's session context so the RPC's auth.uid() guard passes.
         const cookieStore = await cookies()
         const supabaseUserClient = createRouteHandlerClient({
             // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
             cookies: () => cookieStore
         })
-        const { data: { session }, error: sessionError } = await supabaseUserClient.auth.getSession()
-
-        if (sessionError || !session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        // Check if user is admin
-        const { data: userData } = await supabaseUserClient
-            .from('users')
-            .select('role')
-            .eq('id', session.user.id)
-            .single()
-
-        if (userData?.role !== 'admin') {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
-        // --- Primary: aggregated RPC (scales; self-guards on caller role) ---
         const { data: rpcData, error: rpcError } = await supabaseUserClient.rpc('get_admin_dashboard_stats')
         if (!rpcError && rpcData) {
             return NextResponse.json(rpcData)

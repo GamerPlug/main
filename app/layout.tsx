@@ -28,9 +28,10 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-    title: "Gamer Plug Solution - Ghana's #1 High-Speed Data & Gaming Hub",
-    description: "Gamer Plug Solution powers your connection instantly. Buy fast, affordable data bundles for MTN, Telecel, and AirtelTigo in Ghana. Ghana's #1 trusted data reseller platform.",
-    keywords: ['Ghana', 'mobile data', 'airtime', 'MTN', 'Telecel', 'AirtelTigo', 'data bundles', 'gaming', 'internet', 'Gamer Plug'],
+    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://gamerpluggh.com'),
+    title: "Gamer Plug Solution - Ghana's #1 Data Reselling Platform",
+    description: "Gamer Plug Solution powers your connection instantly. Buy fast, affordable data bundles for MTN, Telecel, and AirtelTigo in Ghana. Ghana's #1 trusted data reseller and supplier platform.",
+    keywords: ['Ghana', 'mobile data', 'airtime', 'MTN', 'Telecel', 'AirtelTigo', 'data bundles', 'data reseller', 'data supplier', 'internet', 'Gamer Plug'],
     authors: [{ name: 'Gamer Plug Solution' }],
     applicationName: 'Gamer Plug Solution',
     manifest: '/manifest.webmanifest',
@@ -44,11 +45,34 @@ export const metadata: Metadata = {
         shortcut: '/logo.png',
         apple: '/icons/apple-touch-icon-180.png',
     },
+    alternates: {
+        canonical: '/',
+    },
     openGraph: {
-        title: "Gamer Plug Solution - Ghana's #1 Data Hub",
-        description: "Power your connection instantly. Buy data packages for all Ghanaian networks.",
+        title: "Gamer Plug Solution - Ghana's #1 Data Reselling Platform",
+        description: "Power your connection instantly. Buy affordable data bundles for MTN, Telecel and AirtelTigo across Ghana.",
         type: 'website',
+        url: '/',
+        siteName: 'Gamer Plug Solution',
+        locale: 'en_GH',
         images: [{ url: '/logo.png', width: 512, height: 512, alt: 'Gamer Plug Solution' }],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: "Gamer Plug Solution - Ghana's #1 Data Reselling Platform",
+        description: "Power your connection instantly. Buy affordable data bundles for MTN, Telecel and AirtelTigo across Ghana.",
+        images: ['/logo.png'],
+    },
+    robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+            index: true,
+            follow: true,
+            'max-image-preview': 'large',
+            'max-snippet': -1,
+            'max-video-preview': -1,
+        },
     },
 }
 

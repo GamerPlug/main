@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
         name: 'Gamer Plug Solution',
         short_name: 'Gamer Plug',
         description:
-            "Ghana's #1 high-speed data & gaming hub. Buy data bundles for MTN, Telecel and AirtelTigo instantly.",
+            "Ghana's #1 high-speed data reselling platform. Buy data bundles for MTN, Telecel and AirtelTigo instantly.",
         start_url: '/dashboard',
         scope: '/',
         display: 'standalone',

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { cn, formatDate } from '@/lib/utils'
 
-const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://gamerplug.com').replace(/\/$/, '')
+const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://gamerpluggh.com').replace(/\/$/, '')
 
 export default function DeveloperPage() {
     const [keys, setKeys] = useState<any[]>([])

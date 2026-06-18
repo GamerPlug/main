@@ -75,8 +75,8 @@ export function MobileMenu({ className }: MobileMenuProps) {
                 {/* Navigation Links */}
                 <div className="flex-1 overflow-y-auto py-8 px-6 space-y-6">
                     <div className="space-y-1">
-                        <Link 
-                            href="/guest/purchase" 
+                        <Link
+                            href="/auth/signup"
                             className="flex items-center gap-3 p-4 rounded-2xl bg-primary/5 text-primary text-base font-bold transition-all hover:bg-primary/10"
                             onClick={() => setIsOpen(false)}
                         >

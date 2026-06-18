@@ -16,38 +16,41 @@ export async function middleware(request: NextRequest) {
 
     const pathname = request.nextUrl.pathname
 
-    let session = null
+    let user = null
 
     try {
-        // Add 10 second timeout to prevent hanging (increased for slow connections)
+        // Add 10 second timeout to prevent hanging (increased for slow connections).
+        // getUser() verifies the JWT with the Supabase Auth server (unlike
+        // getSession(), which only decodes the cookie) — required for trustworthy
+        // authorization decisions.
         const timeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Session timeout')), 10000)
+            setTimeout(() => reject(new Error('Auth timeout')), 10000)
         )
 
-        const sessionPromise = supabase.auth.getSession()
+        const userPromise = supabase.auth.getUser()
 
         const { data } = await Promise.race([
-            sessionPromise,
+            userPromise,
             timeout
         ]) as any
 
-        session = data?.session || null
+        user = data?.user || null
     } catch (error) {
-        console.error('Middleware session error:', error)
-        // On error or timeout, treat as no session
-        session = null
+        console.error('Middleware auth error:', error)
+        // On error or timeout, treat as unauthenticated
+        user = null
     }
 
     // Protected dashboard routes
     if (pathname.startsWith('/dashboard')) {
-        if (!session) {
+        if (!user) {
             return addNoCacheHeaders(NextResponse.redirect(new URL('/auth/login', request.url)))
         }
     }
 
     // Protected admin routes
     if (pathname.startsWith('/admin')) {
-        if (!session) {
+        if (!user) {
             return addNoCacheHeaders(NextResponse.redirect(new URL('/auth/login', request.url)))
         }
 
@@ -57,20 +60,18 @@ export async function middleware(request: NextRequest) {
                 setTimeout(() => reject(new Error('Role check timeout')), 5000)
             )
 
-            // Supabase middleware client handles auth token refresh automatically
-            // We just need to check the role.
             const roleQuery = supabase
                 .from('users')
                 .select('role')
-                .eq('id', session.user.id)
+                .eq('id', user.id)
                 .single()
 
-            const { data: user, error } = await Promise.race([
+            const { data: profile, error } = await Promise.race([
                 roleQuery,
                 timeout
             ]) as any
 
-            if (error || !user || (user.role !== 'admin' && user.role !== 'sub-admin')) {
+            if (error || !profile || (profile.role !== 'admin' && profile.role !== 'sub-admin')) {
                 // If error, timeout, or invalid role, redirect.
                 // Log only if it's an error to avoid noise on simple redirection
                 if (error) console.error('Middleware role check failed:', error)
@@ -85,7 +86,7 @@ export async function middleware(request: NextRequest) {
 
     // Redirect authenticated users away from auth pages
     if (pathname.startsWith('/auth')) {
-        if (session) {
+        if (user) {
             return addNoCacheHeaders(NextResponse.redirect(new URL('/dashboard', request.url)))
         }
     }

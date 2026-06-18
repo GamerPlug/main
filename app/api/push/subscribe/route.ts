@@ -1,27 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { createServerClient } from '@/lib/supabase'
+import { requireUser } from '@/lib/admin-auth'
 import { getPushSubscribeRatelimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
-async function getSession() {
-    const cookieStore = await cookies()
-    const supabase = createRouteHandlerClient({
-        // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
-        cookies: () => cookieStore,
-    })
-    const { data: { session }, error } = await supabase.auth.getSession()
-    return { session, error }
-}
-
 export async function POST(request: NextRequest) {
-    const { session, error: sessionError } = await getSession()
-    if (sessionError || !session?.user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await requireUser()
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
-    const userId = session.user.id
+    const userId = auth.userId
 
     // Best-effort rate limit (skips silently if Upstash is not configured).
     try {
@@ -41,9 +30,9 @@ export async function POST(request: NextRequest) {
     const sub = body?.subscription
     const endpoint: string | undefined = sub?.endpoint
     const p256dh: string | undefined = sub?.keys?.p256dh
-    const auth: string | undefined = sub?.keys?.auth
+    const authKey: string | undefined = sub?.keys?.auth
 
-    if (!endpoint || !p256dh || !auth) {
+    if (!endpoint || !p256dh || !authKey) {
         return NextResponse.json({ error: 'Invalid subscription' }, { status: 400 })
     }
 
@@ -56,7 +45,7 @@ export async function POST(request: NextRequest) {
             user_id: userId,
             endpoint,
             p256dh,
-            auth,
+            auth: authKey,
             user_agent: request.headers.get('user-agent') || null,
             last_used_at: new Date().toISOString(),
         },

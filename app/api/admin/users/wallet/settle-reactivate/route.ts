@@ -1,32 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { requireAdmin } from '@/lib/admin-auth'
 import { sendWalletTopupSuccessEmail } from '@/lib/email-service'
 import { sendWalletTopupSuccessSMS } from '@/lib/sms-service'
 
 export async function POST(request: NextRequest) {
     try {
-        const cookieStore = await cookies()
-        const supabaseUserClient = createRouteHandlerClient({
-            // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
-            cookies: () => cookieStore
-        })
-        const { data: { session }, error: sessionError } = await supabaseUserClient.auth.getSession()
-
-        if (sessionError || !session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        // Check if requester is admin
-        const { data: userData } = await supabaseUserClient
-            .from('users')
-            .select('role')
-            .eq('id', session.user.id)
-            .single()
-
-        if (userData?.role !== 'admin' && userData?.role !== 'sub-admin') {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        const auth = await requireAdmin()
+        if (!auth.ok) {
+            return NextResponse.json({ error: auth.error }, { status: auth.status })
         }
 
         const body = await request.json()
@@ -39,46 +21,31 @@ export async function POST(request: NextRequest) {
         // Server-side (service role) to bypass RLS and perform atomic updates
         const supabase = createServerClient()
 
-        // 1. Get wallet and user status
-        const [walletRes, userRes] = await Promise.all([
-            supabase.from('wallets').select('*').eq('user_id', userId).single(),
-            supabase.from('users').select('first_name, email, phone_number, requires_settlement').eq('id', userId).single()
-        ])
-
-        if (walletRes.error || !walletRes.data) {
-            return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
-        }
-
-        const wallet = walletRes.data
-        const user = userRes.data
-        const currentBalance = Number(wallet.balance) || 0
-        const settlementAmount = currentBalance < 0 ? Math.abs(currentBalance) : 0
-
-        // 2. Perform Atomic Update
-        // We credit the balance to exactly 0 (if negative) and clear the flag
-        const { data: updatedWallet, error: updateError } = await (supabase.from('wallets') as any)
-            .update({ 
-                balance: 0, 
-                total_credited: (Number(wallet.total_credited) || 0) + settlementAmount,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', wallet.id)
-            .select()
+        // 1. Fetch user details (for notifications)
+        const { data: user } = await supabase
+            .from('users')
+            .select('first_name, email, phone_number')
+            .eq('id', userId)
             .single()
 
-        if (updateError) throw updateError
+        // 2. Atomically zero a negative balance and clear the settlement flag
+        //    (row-locked RPC; avoids a race against concurrent debits).
+        const { data: settleResult, error: settleError } = await (supabase as any).rpc('settle_wallet_to_zero', {
+            p_user_id: userId,
+        })
 
-        // 3. Clear settlement flag on user
-        const { error: userUpdateError } = await (supabase.from('users') as any)
-            .update({ requires_settlement: false })
-            .eq('id', userId)
+        if (settleError || !(settleResult as any)?.success) {
+            const msg = (settleResult as any)?.error || settleError?.message || 'Settlement failed'
+            return NextResponse.json({ error: msg }, { status: msg === 'Wallet not found' ? 404 : 500 })
+        }
 
-        if (userUpdateError) console.error('[SettlementAPI] Failed to clear flag:', userUpdateError)
+        const walletId = (settleResult as any).wallet_id
+        const settlementAmount = Number((settleResult as any).settled_amount) || 0
 
         // 4. Log Transaction (only if there was a debt to settle)
         if (settlementAmount > 0) {
             await (supabase.from('wallet_transactions') as any).insert({
-                wallet_id: wallet.id,
+                wallet_id: walletId,
                 user_id: userId,
                 type: 'credit',
                 amount: settlementAmount,

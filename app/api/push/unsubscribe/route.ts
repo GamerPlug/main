@@ -1,24 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { createServerClient } from '@/lib/supabase'
+import { requireUser } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
-async function getSession() {
-    const cookieStore = await cookies()
-    const supabase = createRouteHandlerClient({
-        // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
-        cookies: () => cookieStore,
-    })
-    const { data: { session }, error } = await supabase.auth.getSession()
-    return { session, error }
-}
-
 export async function POST(request: NextRequest) {
-    const { session, error: sessionError } = await getSession()
-    if (sessionError || !session?.user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await requireUser()
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
     let body: any
@@ -39,7 +28,7 @@ export async function POST(request: NextRequest) {
         .from('push_subscriptions')
         .delete()
         .eq('endpoint', endpoint)
-        .eq('user_id', session.user.id)
+        .eq('user_id', auth.userId)
 
     if (error) {
         console.error('[push/unsubscribe] delete error:', error.message)

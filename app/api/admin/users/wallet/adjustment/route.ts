@@ -1,32 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { requireAdmin } from '@/lib/admin-auth'
 import { sendWalletTopupSuccessEmail } from '@/lib/email-service'
 import { sendWalletTopupSuccessSMS } from '@/lib/sms-service'
 import { createNotification, balanceUpdatedNotification } from '@/lib/notification-service'
 
 export async function POST(request: NextRequest) {
     try {
-        const cookieStore = await cookies()
-        const supabaseUserClient = createRouteHandlerClient({
-            // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
-            cookies: () => cookieStore
-        })
-        const { data: { session }, error: sessionError } = await supabaseUserClient.auth.getSession()
-
-        if (sessionError || !session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        const auth = await requireAdmin()
+        if (!auth.ok) {
+            return NextResponse.json({ error: auth.error }, { status: auth.status })
         }
-
-        // Check if requester is admin
-        const { data: userData } = await supabaseUserClient
-            .from('users')
-            .select('role')
-            .eq('id', session.user.id)
-            .single()
-
-        if (userData?.role !== 'admin') {
+        // Manual wallet adjustments are restricted to full admins.
+        if (auth.role !== 'admin') {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
@@ -100,37 +86,21 @@ export async function POST(request: NextRequest) {
         }
 
         const isCredit = type === 'credit'
-        const newBalance = isCredit
-            ? ((wallet as any).balance + adjustmentAmount)
-            : ((wallet as any).balance - adjustmentAmount)
 
-        const totalBuyingPower = (wallet as any).balance + ((wallet as any).credit_limit || 0)
+        // 2. Atomic balance change (row-locked RPC; prevents concurrent-update races)
+        const { data: adjustResult, error: adjustError } = await (supabase as any).rpc('adjust_wallet_balance', {
+            p_user_id: userId,
+            p_amount: adjustmentAmount,
+            p_type: isCredit ? 'credit' : 'debit',
+        })
 
-        if (!isCredit && (totalBuyingPower - adjustmentAmount < 0)) {
-            return NextResponse.json({ error: `User has insufficient balance (including credit limit of GHS ${(wallet as any).credit_limit || 0}) for this debit` }, { status: 400 })
+        if (adjustError || !(adjustResult as any)?.success) {
+            const msg = (adjustResult as any)?.error || adjustError?.message || 'Wallet adjustment failed'
+            const status = msg === 'Insufficient balance' ? 400 : 500
+            return NextResponse.json({ error: msg }, { status })
         }
 
-        // 2. Update wallet
-        const updateData: any = {
-            balance: newBalance,
-            updated_at: new Date().toISOString()
-        }
-
-        if (isCredit) {
-            updateData.total_credited = ((wallet as any).total_credited || 0) + adjustmentAmount
-        } else {
-            updateData.total_spent = ((wallet as any).total_spent || 0) + adjustmentAmount
-        }
-
-        const { error: walletUpdateError } = await (supabase
-            .from('wallets') as any)
-            .update(updateData)
-            .eq('id', (wallet as any).id)
-
-        if (walletUpdateError) {
-            console.error('[AdminWalletAdjustment] Wallet update error:', walletUpdateError)
-            throw walletUpdateError
-        }
+        const newBalance = (adjustResult as any).new_balance
 
         // 3. Log transaction
         const { error: transError } = await (supabase.from('wallet_transactions') as any).insert({

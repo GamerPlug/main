@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient } from '@/lib/supabase-server'
 import { createServerClient } from '@/lib/supabase'
+import { requireUser } from '@/lib/admin-auth'
 import { calculatePaystackFee, generateReferenceCode } from '@/lib/utils'
 import { getPaymentRatelimit, resetRatelimitSingletons } from '@/lib/rate-limit'
 
@@ -17,7 +17,6 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const supabase = createRouteClient()
         const supabaseAdmin = createServerClient() // For database operations
 
         // Check if wallet top-up is enabled in admin settings
@@ -44,13 +43,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Maximum top-up per transaction is GHS 5,000' }, { status: 400 })
         }
 
-        // Get current user
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        // Get current user (server-verified)
+        const auth = await requireUser()
+        if (!auth.ok) {
+            return NextResponse.json({ error: auth.error }, { status: auth.status })
         }
 
-        const userId = session.user.id
+        const userId = auth.userId
 
         // Rate limit: 10 payment inits per user per minute
         try {
@@ -172,7 +171,7 @@ export async function POST(request: NextRequest) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                email: (user as any)?.email || session.user.email,
+                email: (user as any)?.email || auth.email,
                 amount: Math.round(totalAmount * 100), // Paystack uses kobo/pesewas
                 currency: 'GHS',
                 reference: reference,

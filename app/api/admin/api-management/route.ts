@@ -1,34 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { createServerClient } from '@/lib/supabase'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export async function GET(request: NextRequest) {
-    const cookieStore = await cookies()
-    const supabase = createRouteHandlerClient({ 
-        // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
-        cookies: () => cookieStore 
-    })
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    // Check if user is admin
-    const { data: userProfile } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', session.user.id)
-        .single()
-
-    if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'sub-admin')) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    const auth = await requireAdmin()
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
     const db = createServerClient()
     const { data: keys, error } = await db
         .from('api_keys')
         .select(`
-            *,
+            id,
+            user_id,
+            name,
+            key_preview,
+            key_prefix,
+            is_active,
+            rate_limit_override,
+            last_used_at,
+            created_at,
             users (
                 email,
                 first_name,
@@ -44,24 +36,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-    const cookieStore = await cookies()
-    const supabase = createRouteHandlerClient({ 
-        // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
-        cookies: () => cookieStore 
-    })
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    // Check if user is admin
-    const { data: userProfile } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', session.user.id)
-        .single()
-
-    if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'sub-admin')) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    const auth = await requireAdmin()
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
     const body = await request.json()
@@ -87,24 +64,9 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-    const cookieStore = await cookies()
-    const supabase = createRouteHandlerClient({ 
-        // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
-        cookies: () => cookieStore 
-    })
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    // Check if user is admin
-    const { data: userProfile } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', session.user.id)
-        .single()
-
-    if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'sub-admin')) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    const auth = await requireAdmin()
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
     const { searchParams } = new URL(request.url)

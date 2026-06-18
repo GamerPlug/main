@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { requireAdmin } from '@/lib/admin-auth'
 import { sendRoleUpgradeSuccessSMS } from '@/lib/sms-service'
 import { createNotification, roleChangeNotification } from '@/lib/notification-service'
 
@@ -9,27 +8,17 @@ const ROLE_RANK: Record<string, number> = {
     user: 1, agent: 2, 'super agent': 2.5, dealer: 3, 'super dealer': 3.5, platinum: 3.8, 'sub-admin': 4, admin: 5,
 }
 
+// Only these roles may be assigned (prevents arbitrary/garbage role strings).
+const ASSIGNABLE_ROLES = new Set(Object.keys(ROLE_RANK))
+
 export async function POST(request: NextRequest) {
     try {
-        const cookieStore = await cookies()
-        const supabaseUserClient = createRouteHandlerClient({
-            // @ts-expect-error - auth-helpers types expect Promise but runtime needs synchronous object
-            cookies: () => cookieStore
-        })
-        const { data: { session }, error: sessionError } = await supabaseUserClient.auth.getSession()
-
-        if (sessionError || !session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        // Role changes are restricted to full admins (not sub-admins).
+        const auth = await requireAdmin()
+        if (!auth.ok) {
+            return NextResponse.json({ error: auth.error }, { status: auth.status })
         }
-
-        // Check if requester is admin
-        const { data: userData } = await supabaseUserClient
-            .from('users')
-            .select('role')
-            .eq('id', session.user.id)
-            .single()
-
-        if (userData?.role !== 'admin') {
+        if (auth.role !== 'admin') {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
@@ -39,6 +28,15 @@ export async function POST(request: NextRequest) {
 
         if (!userId || !role) {
             return NextResponse.json({ error: 'userId and role are required' }, { status: 400 })
+        }
+
+        if (!ASSIGNABLE_ROLES.has(role)) {
+            return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+        }
+
+        // An admin cannot change their own role (prevents self-lockout / privilege escalation).
+        if (userId === auth.userId) {
+            return NextResponse.json({ error: 'Cannot change your own role' }, { status: 400 })
         }
 
         // Service role client to bypass RLS

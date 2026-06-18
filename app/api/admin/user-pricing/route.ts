@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient } from '@/lib/supabase-server'
+import { requireAdmin as requireAdminAuth } from '@/lib/admin-auth'
 import { createClient } from '@supabase/supabase-js'
 
 // Service-role client for privileged writes (bypasses RLS)
@@ -12,18 +12,10 @@ const supabaseAdmin = createClient(
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 async function requireAdmin() {
-    const supabase = createRouteClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return { error: 'Unauthorized', status: 401 as const }
-
-    const { data: user } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', session.user.id)
-        .single()
-
-    if ((user as any)?.role !== 'admin') return { error: 'Forbidden', status: 403 as const }
-    return { adminId: session.user.id }
+    const auth = await requireAdminAuth()
+    if (!auth.ok) return { error: auth.error, status: auth.status }
+    if (auth.role !== 'admin') return { error: 'Forbidden', status: 403 as const }
+    return { adminId: auth.userId }
 }
 
 // GET — list all custom price overrides with user + package context

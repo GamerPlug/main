@@ -40,9 +40,30 @@ export async function GET(request: NextRequest) {
             return NextResponse.redirect(errorUrl)
         }
 
+        // Defense-in-depth: confirm the paid amount + currency match the expected
+        // wallet_payment record before crediting (parity with the webhook).
+        const supabase = createServerClient()
+        const { data: payment } = await supabase
+            .from('wallet_payments')
+            .select('total_amount')
+            .eq('reference', reference)
+            .single()
+
+        const expectedKobo = payment ? Math.round(Number((payment as any).total_amount) * 100) : null
+        const paidKobo = paystackData.data.amount
+        const paidCurrency = paystackData.data.currency
+
+        if (!payment || paidKobo !== expectedKobo || (paidCurrency && paidCurrency !== 'GHS')) {
+            console.error('[PaymentVerify] Amount/currency mismatch:', { reference, paidKobo, expectedKobo, paidCurrency })
+            const errorUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/wallet?error=amount_mismatch`
+            if (isInline) {
+                return NextResponse.json({ success: false, error: 'Payment amount mismatch', url: errorUrl }, { status: 400 })
+            }
+            return NextResponse.redirect(errorUrl)
+        }
+
         // Regular wallet payment
         console.log('[PaymentVerify] Identified as REGULAR WALLET TOPUP')
-        // Joseph: Removed upgrade block
         const result = await processCompletedWalletPayment(reference, paystackData.data)
 
         if (!result.success) {
