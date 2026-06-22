@@ -12,6 +12,7 @@ export const viewport: Viewport = {
     interactiveWidget: 'resizes-content',
 }
 import { Inter } from 'next/font/google'
+import { headers } from 'next/headers'
 import './globals.css'
 import { AuthProvider } from '@/contexts/auth-context'
 import { Toaster } from '@/components/ui/sonner'
@@ -76,11 +77,15 @@ export const metadata: Metadata = {
     },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
+    // Nonce minted per-request in middleware; next-themes stamps it onto the
+    // inline theme script so it survives the strict (no 'unsafe-inline') CSP.
+    const nonce = (await headers()).get('x-nonce') ?? undefined
+
     return (
         <html lang="en" suppressHydrationWarning>
             <body className={`${inter.variable} font-sans`}>
@@ -89,6 +94,7 @@ export default function RootLayout({
                     defaultTheme="light"
                     enableSystem
                     disableTransitionOnChange
+                    nonce={nonce}
                 >
                     <AuthProvider>
                         {children}
