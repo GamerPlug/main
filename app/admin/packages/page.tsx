@@ -49,7 +49,7 @@ import {
 import { toast } from 'sonner'
 import { DataPackage } from '@/types/supabase'
 
-const NETWORKS = ['MTN', 'Telecel', 'AT-BigTime'] as const
+const NETWORKS = ['MTN', 'Telecel', 'AT-iShare', 'AT-BigTime'] as const
 
 interface PackageFormData {
     network: typeof NETWORKS[number]
@@ -414,7 +414,8 @@ export default function AdminPackagesPage() {
                             <h2 className="text-xl font-bold flex items-center gap-2">
                                 <span className={`px-3 py-1 rounded-full text-white text-sm ${network === 'MTN' ? 'bg-yellow-500' :
                                     network === 'Telecel' ? 'bg-red-600' :
-                                        'bg-blue-600'
+                                        network === 'AT-iShare' ? 'bg-orange-500' :
+                                            'bg-blue-600'
                                     }`}>
                                     {network}
                                 </span>

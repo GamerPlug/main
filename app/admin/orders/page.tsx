@@ -1027,7 +1027,7 @@ export default function AdminOrdersPage() {
                                     />
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
-                                    {['All', 'MTN', 'Telecel', 'AT-BigTime'].map((network) => (
+                                    {['All', 'MTN', 'Telecel', 'AT-iShare', 'AT-BigTime'].map((network) => (
                                         <Button
                                             key={network}
                                             variant={availableNetworkFilter === (network === 'All' ? 'all' : network) ? 'default' : 'outline'}
@@ -1038,7 +1038,7 @@ export default function AdminOrdersPage() {
                                                     ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
                                                     : network === 'Telecel'
                                                         ? 'bg-red-600 hover:bg-red-700 text-white'
-                                                        : network === 'AT-BigTime'
+                                                        : network === 'AT-iShare' || network === 'AT-BigTime'
                                                             ? 'bg-blue-600 hover:bg-blue-700 text-white'
                                                             : 'bg-primary text-primary-foreground'
                                                 : 'hover:bg-muted'
@@ -1156,7 +1156,7 @@ export default function AdminOrdersPage() {
                             />
                         </div>
                         <div className="flex flex-wrap gap-1.5 pt-1">
-                            {['All', 'MTN', 'Telecel', 'AT-BigTime'].map((network) => (
+                            {['All', 'MTN', 'Telecel', 'AT-iShare', 'AT-BigTime'].map((network) => (
                                 <Button
                                     key={network}
                                     id={`network-filter-${network.toLowerCase()}`}
@@ -1169,7 +1169,7 @@ export default function AdminOrdersPage() {
                                             ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
                                             : network === 'Telecel'
                                                 ? 'bg-red-600 hover:bg-red-700 text-white'
-                                                : network === 'AT-BigTime'
+                                                : network === 'AT-iShare' || network === 'AT-BigTime'
                                                     ? 'bg-blue-600 hover:bg-blue-700 text-white'
                                                     : 'bg-primary text-primary-foreground'
                                         : 'hover:bg-muted'

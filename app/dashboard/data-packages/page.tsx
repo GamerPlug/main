@@ -28,7 +28,7 @@ interface ValidationResult {
     packageId?: string
 }
 
-type NetworkGroupId = 'MTN' | 'Telecel' | 'AT-BigTime'
+type NetworkGroupId = 'MTN' | 'Telecel' | 'AT-iShare' | 'AT-BigTime'
 type InputMode = 'text' | 'excel'
 
 interface NetworkGroup {
@@ -59,6 +59,15 @@ const NETWORK_GROUPS: NetworkGroup[] = [
         iconBg: '#E60000',
         iconText: '#fff',
         blobColor: 'rgba(230,0,0,0.12)',
+    },
+    {
+        id: 'AT-iShare',
+        label: 'AT iShare',
+        networks: ['AT-iShare'],
+        abbr: 'AT-iS',
+        iconBg: '#0056B3',
+        iconText: '#fff',
+        blobColor: 'rgba(0,86,179,0.14)',
     },
     {
         id: 'AT-BigTime',
@@ -219,7 +228,7 @@ export default function DataPackagesPage() {
     const validateEntries = (entries: { lineNumber: number; phoneNumber: string; volume: number }[]): ValidationResult[] => {
         const group = NETWORK_GROUPS.find(g => g.id === selectedGroup)!
         const groupNetworks = group.networks
-        const targetNet = selectedGroup === 'AT-BigTime'
+        const targetNet = (selectedGroup === 'AT-iShare' || selectedGroup === 'AT-BigTime')
             ? 'AirtelTigo'
             : selectedGroup
 

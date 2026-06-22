@@ -90,7 +90,7 @@ export interface Wallet {
 
 export interface DataPackage {
     id: string
-    network: 'MTN' | 'Telecel' | 'AT-BigTime'
+    network: 'MTN' | 'Telecel' | 'AT-iShare' | 'AT-BigTime'
     size: string
     price: number
     dealer_price?: number
